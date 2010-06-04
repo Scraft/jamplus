@@ -23,6 +23,7 @@
 #endif
 
 # include "command.h"
+# include "filegen.h"
 # include "buffer.h"
 # include <limits.h>
 
@@ -314,7 +315,7 @@ cmd_string(
 
 		    ((char*)ine)[0] = save;
 
-		    file = fopen(buffer_ptr( &subbuff ), "wb");
+		    file = file_open(buffer_ptr( &subbuff ), "wb");
 		    buffer_free( &subbuff );
 
 		    ine++;

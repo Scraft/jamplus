@@ -82,6 +82,7 @@ SOURCES = \
 	fileos2.c \
 	fileunix.c \
 	filevms.c \
+	filegen.c \
 	glob.c \
 	hash.c \
 	hcache.c \

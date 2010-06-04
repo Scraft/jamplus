@@ -218,6 +218,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\filegen.c"
+				>
+			</File>
+			<File
 				RelativePath=".\fileglob.c"
 				>
 			</File>
@@ -393,6 +397,10 @@
 			</File>
 			<File
 				RelativePath=".\expand.h"
+				>
+			</File>
+			<File
+				RelativePath=".\filegen.h"
 				>
 			</File>
 			<File

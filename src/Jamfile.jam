@@ -295,7 +295,7 @@ actions GenFile1
 
 C.OutputPostfix * : : release releaseltcg ;
 
-C.Application mkjambase : mkjambase.c ;
+C.Application mkjambase : filegen.c mkjambase.c ;
 
 if $(VMS)
 {
@@ -315,7 +315,7 @@ C.OutputPath jam : $(BIN_PATH) ;
 C.Application jam : jam.c jambase-j.c ;
 
 C.Library libjam :
-		    buffer.c builtins.c command.c compile.c $(code) expand.c
+		    filegen.c buffer.c builtins.c command.c compile.c $(code) expand.c
 		    glob.c hash.c headers.c lists.c luagsub.c luasupport.c make.c make1.c
 		    newstr.c option.c parse.c regexp.c rules.c scan.c
 		    search.c timestamp.c variable.c ;
@@ -454,12 +454,12 @@ ALLSOURCE =
 	Build.com Build.mpw Jam.html Jambase Jambase.html Jamfile
 	Jamfile.html Makefile Porting README RELNOTES builtins.c builtins.h
 	command.c command.h compile.c compile.h execcmd.h execmac.c
-	execunix.c execvms.c expand.c expand.h filemac.c filent.c
-	fileos2.c filesys.h fileunix.c filevms.c glob.c hash.c hash.h
-	headers.c headers.h jam.c jam.h jambase.c jambase.h jamgram.c
-	jamgram.h jamgram.y jamgram.yy jamgramtab.h lists.c lists.h
-	make.c make.h make1.c mkjambase.c newstr.c newstr.h option.c
-	option.h parse.c parse.h patchlevel.h pathmac.c pathsys.h
+	execunix.c execvms.c expand.c expand.h filegen.c filegen.h 
+	filemac.c filent.c fileos2.c filesys.h fileunix.c filevms.c glob.c
+	hash.c hash.h headers.c headers.h jam.c jam.h jambase.c jambase.h
+	jamgram.c jamgram.h jamgram.y jamgram.yy jamgramtab.h lists.c
+	lists.h	make.c make.h make1.c mkjambase.c newstr.c newstr.h
+	option.c option.h parse.c parse.h patchlevel.h pathmac.c pathsys.h
 	pathunix.c pathvms.c regexp.c regexp.h rules.c rules.h scan.c
 	scan.h search.c search.h timestamp.c timestamp.h variable.c
 	variable.h yyacc ;

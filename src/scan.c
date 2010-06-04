@@ -26,6 +26,7 @@
 # include "jamgram.h"
 # include "jambase.h"
 # include "newstr.h"
+# include "filegen.h"
 
 struct keyword {
 	const char *word;
@@ -165,7 +166,7 @@ yyline()
 	{
 	    FILE *f = stdin;
 
-	    if( strcmp( i->fname, "-" ) && !( f = fopen( i->fname, "r" ) ) )
+	    if( strcmp( i->fname, "-" ) && !( f = file_open( i->fname, "r" ) ) )
 		perror( i->fname );
 
 	    i->file = f;

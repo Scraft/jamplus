@@ -118,6 +118,7 @@
 # include "scan.h"
 # include "timestamp.h"
 # include "make.h"
+# include "filegen.h"
 
 # include "buffer.h"
 # include "expand.h"
@@ -746,7 +747,7 @@ int main( int argc, char **argv, char **arg_environ )
 
 	if( s = getoptval( optv, 'o', 0 ) )
 	{
-	    if( !( globs.cmdout = fopen( s, "w" ) ) )
+	    if( !( globs.cmdout = file_open( s, "w" ) ) )
 	    {
 		printf( "Failed to write to '%s'\n", s );
 		exit( EXITBAD );
@@ -813,7 +814,7 @@ int main( int argc, char **argv, char **arg_environ )
 	    elapsed_logfile_name = getenv("JAM_ELAPSED_LOGFILE");
 	    if (elapsed_logfile_name)
 	    {
-		FILE* file = fopen(elapsed_logfile_name, "a");
+		FILE* file = file_open(elapsed_logfile_name, "a");
 		if (!file) {
 		    printf("could not open elapsed log file \"%s\"\n",
 			   elapsed_logfile_name);

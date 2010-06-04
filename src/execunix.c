@@ -41,6 +41,7 @@
 # include "jam.h"
 # include "lists.h"
 # include "execcmd.h"
+# include "filegen.h"
 # include <errno.h>
 
 # include "parse.h"
@@ -375,7 +376,7 @@ execcmd(
 
 	    /* Write command to bat file. */
 
-	    f = fopen( cmdtab[ slot ].tempfile, "w" );
+	    f = file_open( cmdtab[ slot ].tempfile, "w" );
 #ifdef OPT_FIX_TEMPFILE_CRASH
 	    if (!f) {
 		perror( "fopen" );

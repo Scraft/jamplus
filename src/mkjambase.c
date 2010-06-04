@@ -21,6 +21,7 @@
  * 11/04/02 (seiwald) - const-ing for string literals
  */
 
+# include "filegen.h"
 # include <stdio.h>
 # include <string.h>
 
@@ -38,7 +39,7 @@ main( int argc, char **argv, char **envp )
 	    return -1;
 	}
 
-	if( !( fout = fopen( argv[1], "w" ) ) )
+	if( !( fout = file_open( argv[1], "w" ) ) )
 	{
 	    perror( argv[1] );
 	    return -1;
@@ -61,7 +62,7 @@ main( int argc, char **argv, char **envp )
 
 	for( ; argc--; argv++ )
 	{
-	    if( !( fin = fopen( *argv, "r" ) ) )
+	    if( !( fin = file_open( *argv, "r" ) ) )
 	    {
 		perror( *argv );
 		return -1;

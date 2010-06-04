@@ -41,6 +41,7 @@
 # include "newstr.h"
 # include "regexp.h"
 # include "pathsys.h"
+# include "filegen.h"
 
 # include "buffer.h"
 # include "variable.h"
@@ -847,7 +848,7 @@ builtin_md5file(
 			pushsettings( t->settings );
 			t->boundname = search( t->name, &t->time );
 			popsettings( t->settings );
-		    file = fopen(t->boundname, "rb");
+		    file = file_open(t->boundname, "rb");
 		    if (file) {
 			size_t readSize;
 
@@ -1000,7 +1001,7 @@ static void shell_done( const char* outputname, void *closure, int status )
     char* buffer;
     long size;
     LIST **list = (LIST**)closure;
-    FILE *file = fopen(outputname, "rb");
+    FILE *file = file_open(outputname, "rb");
     if (!file)
 	return;
     if (fseek(file, 0, SEEK_END) != 0) {

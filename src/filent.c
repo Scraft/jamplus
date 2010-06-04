@@ -31,6 +31,7 @@
 # include "jam.h"
 # include "filesys.h"
 # include "pathsys.h"
+# include "filegen.h"
 
 # ifdef OS_NT
 
@@ -562,13 +563,13 @@ int copyfile(const char *dst, const char *src, MD5SUM* md5sum)
 
     file_mkdir(dst);
 
-    fsrc = fopen(src, "rb");
+    fsrc = file_open(src, "rb");
     if (fsrc==NULL) {
 	printf("cannot open %s for reading - %s\n", src, strerror(errno));
 	return 0;
     }
 
-    fdst = fopen(dst, "wb");
+    fdst = file_open(dst, "wb");
     if (fdst==NULL) {
 	fclose(fsrc);
 	printf("cannot open %s for writing - %s\n", dst, strerror(errno));
@@ -665,7 +666,7 @@ void md5file(const char *filename, MD5SUM sum)
 {
     MD5_CTX context;
 #define BLOCK_SIZE 1024 /* file is read in blocks of custom size, just so we don't have to read the whole file at once */
-    FILE *f = fopen( filename, "rb" );
+    FILE *f = file_open( filename, "rb" );
 
     if( f == NULL ) {
 //	printf("Cannot calculate md5 for %s\n", filename);

@@ -71,6 +71,7 @@
 #endif
 # include "md5.h"
 # include "hcache.h"
+# include "filegen.h"
 # include "buffer.h"
 #endif
 #ifdef OPT_BUILTIN_LUA_SUPPORT_EXT
@@ -880,7 +881,7 @@ make1d(
 		size_t		n;
 		char		buf[4096];
 
-		fp = fopen( outputname, "r" );
+		fp = file_open( outputname, "r" );
 		if (fp)
 		{
 			n = fread(buf, sizeof(char), sizeof buf, fp);
@@ -1912,7 +1913,7 @@ printResponseFiles(CMD* cmd)
 	printf("==================================="
 	       "===================================\n");
 	printf("contents of response file %s\n", r->file->name);
-	f = fopen(r->file->name, "r");
+	f = file_open(r->file->name, "r");
 	if (!f) {
 	    printf("error: could not open temp file\n");
 	} else {

@@ -27,6 +27,7 @@
 # include "jam.h"
 # include "lists.h"
 # include "execcmd.h"
+# include "filegen.h"
 
 # ifdef OS_VMS
 
@@ -87,7 +88,7 @@ execcmd(
 	    
 	    /* Open tempfile */
 
-	    if( !( f = fopen( tempnambuf + 1, "w" ) ) )
+	    if( !( f = file_open( tempnambuf + 1, "w" ) ) )
 	    {
 		printf( "can't open command file\n" );
 		(*func)( closure, EXEC_CMD_FAIL );

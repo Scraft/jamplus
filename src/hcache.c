@@ -15,6 +15,7 @@
 # include "search.h"
 # include "compile.h"
 # include "filesys.h"
+# include "filegen.h"
 # include "buffer.h"
 #if _MSC_VER
 # include <sys/utime.h>
@@ -347,7 +348,7 @@ hcache_readfile(HCACHEFILE *file)
 /*    if( ! (hcachename = hcache_filename()) )
 	return;*/
 
-    if( ! (f = fopen( file->cachefilename, "rb" )) )
+    if( ! (f = file_open( file->cachefilename, "rb" )) )
 	return;
 
     fseek( f, 0, SEEK_END );
@@ -536,7 +537,7 @@ hcache_writefile(HCACHEFILE *file)
 
     file_mkdir(file->cachefilename);
 
-    if( ! (f = fopen( file->cachefilename, "wb" ) ) )
+    if( ! (f = file_open( file->cachefilename, "wb" ) ) )
 	return;
 
     maxage = cache_maxage();
@@ -1221,7 +1222,7 @@ void filecache_update(TARGET *t)
 	buffer_addchar(&linknamebuff, 0);
 
 	file_mkdir(buffer_ptr(&linknamebuff));
-	file = fopen(buffer_ptr(&linknamebuff), "wb");
+	file = file_open(buffer_ptr(&linknamebuff), "wb");
 	if (file)
 	{
 	    write_md5sum(file, blobmd5sum);

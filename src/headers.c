@@ -39,6 +39,7 @@
 # include "headers.h"
 # include "newstr.h"
 # include "hash.h"
+# include "filegen.h"
 
 #ifdef OPT_HEADER_CACHE_EXT
 # include "hcache.h"
@@ -230,7 +231,7 @@ headers1(
 	}
 	else
 	{
-		if( !( f = fopen( file, "r" ) ) )
+		if( !( f = file_open( file, "r" ) ) )
 		    return result;
 	}
 
@@ -243,7 +244,7 @@ headers1(
 
 	if ( hdrpipefile = var_get( "HDRPIPEFILE" ) )
 	{
-		if( !( f = fopen( hdrpipefile->string, "r" ) ) )
+		if( !( f = file_open( hdrpipefile->string, "r" ) ) )
 		    return result;
 		result = headers1helper( f, hdrscan );
 		fclose( f );
@@ -284,7 +285,7 @@ headers1(
 	    printf("*** patience...\n");
 #endif
 
-	if( !( f = fopen( file, "r" ) ) )
+	if( !( f = file_open( file, "r" ) ) )
 	    return result;
 
 	if ( !regexhash )
