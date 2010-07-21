@@ -1,0 +1,66 @@
+# This rule will apply the shaders to a given project, and makes sure dependencies are setup correctly.
+rule ApplyShaders PARENTS : SHADERS : WORKSPACENAME
+{			
+	# Get list of hlsl-headers from parent.
+	local headers ;		
+	on $(SHADERS) headers = $(HLSL_HEADERS) ;	
+	
+	# Go through each header.
+	for header in $(headers)
+	{
+		# Get the name of this header, gristed for the current target.
+		local gristedHeader = $(header:BSG=$(PARENTS)) ;
+		
+		# Force dependencies for this gristed header.
+		ForceCare $(gristedHeader) ;	
+			
+		# Setup a dependency between the gristed header and the real header.
+		Depends $(gristedHeader) : $(header) ;	
+	}
+	
+	# Setup include directories.
+	C.IncludeDirectories $(PARENTS) : $(header:P) ;
+
+	if $(WORKSPACENAME)
+	{
+		# Add project to workspace - I'm not sure if there is a nicer way to do this than passing WORKSPACENAME in here?
+		Workspace $(WORKSPACENAME) : $(SHADERS) ;
+	}
+}
+
+# Action to build hlsl source, a shader compiler should be called here, but for the purpose
+# of this example, I am just writing an extern function definition into the header file.
+actions Hlsl
+{
+	ECHO extern inline int $(1:BU)Add( int a, int b ) { return a + b; } > $(1)
+}
+
+rule GenerateShaders PARENTS : SOURCES
+{		
+	# Find the sources.
+	SEARCH on $(SOURCES) = $(SEARCH_SOURCE) ;
+
+	# Go through each source file.
+	for source in $(SOURCES:T)
+	{				
+		# Work out header name from source name.
+		local header = $(source:LS=Shaders.h) ;
+				
+		# Add header/source to target, so it can be queried later by the apply rule.
+		on $(PARENTS) HLSL_HEADERS += $(header) ;
+		
+		# Setup a dependency (at the file level) between header and source.
+		Depends $(header) : $(source) ;
+		
+		# Action to build header from source.
+		Hlsl $(header) : $(source) ;
+	}
+		
+	# Perform header scan on our hlsl files as they might have #include's.
+	HDRRULE on $(SOURCES:T)		= C.HdrRule ;
+	HDRSCAN on $(SOURCES:T)		= $(C.HDRPATTERN) ;
+	HDRGRIST on $(SOURCES:T)	= $(grist) ;
+	
+	# Generate project for shaders.
+	Project $(PARENTS) : $(SOURCES) $(SOURCES:LS=shaders.h) ;
+}

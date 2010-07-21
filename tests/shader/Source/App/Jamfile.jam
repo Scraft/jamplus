@@ -1,0 +1,13 @@
+SubDir TOP App ;
+
+SubInclude TOP Shaders ;
+SubInclude TOP Lib ;
+
+# Apply shaders to JamTest target.
+ApplyShaders JamTest : shaders : JamTest ;
+
+# Make JamTest link against JamLib.
+C.LinkLibraries	JamTest : JamLib ; 
+
+# Make JamTest from main.cpp.
+C.Application JamTest : main.cpp main.h ;

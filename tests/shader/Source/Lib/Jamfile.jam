@@ -1,0 +1,7 @@
+SubDir TOP Lib ;
+
+# Apply shaders to JamLib target.
+ApplyShaders JamLib : shaders ;
+
+# Make JamLib from lib.cpp.
+C.Library JamLib : lib.cpp ;
