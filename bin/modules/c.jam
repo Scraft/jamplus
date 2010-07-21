@@ -192,7 +192,14 @@ rule C.MultiCppCompile TARGET : SOURCES
 
 	C._MultiCppCompile_PreCompile ;
 
-	local ALL_TYPES =
+	local FLAGS_ALL_TYPES =
+			*.*
+			$(PLATFORM).*
+			*.$(CONFIG)
+			$(PLATFORM).$(CONFIG)
+	;
+
+	local INCLUDES_ALL_TYPES =
 			$(PLATFORM).$(CONFIG)
 			*.$(CONFIG)
 			$(PLATFORM).*
@@ -212,34 +219,34 @@ rule C.MultiCppCompile TARGET : SOURCES
 	postHDRS += $(SUBDIRHDRS) ;
 
 	on C.* {
-		postHDRS += $(HDRS.$(ALL_TYPES)) ;
+		postHDRS += $(HDRS.$(INCLUDES_ALL_TYPES)) ;
 		if $(MSVCNT) {
 			local flags = /I /AI ;
-			postREFERENCEDIRECTORIES += $(flags)\"$(REFERENCEDIRECTORIES.$(ALL_TYPES))\" ;
+			postREFERENCEDIRECTORIES += $(flags)\"$(REFERENCEDIRECTORIES.$(INCLUDES_ALL_TYPES))\" ;
 		}
-		preDEFINES += $(DEFINES.$(ALL_TYPES)) ;
-		preCCFLAGS += $(CCFLAGS.$(ALL_TYPES)) ;
-		preC++FLAGS += $(C++FLAGS.$(ALL_TYPES)) ;
-		preMFLAGS += $(MFLAGS.$(ALL_TYPES)) ;
-		preMMFLAGS += $(MMFLAGS.$(ALL_TYPES)) ;
-		flagsToRemove += $(FLAGS_TO_REMOVE.$(ALL_TYPES)) ;
-		flagsToAdd += $(FLAGS_TO_ADD.$(ALL_TYPES)) ;
+		preDEFINES += $(DEFINES.$(FLAGS_ALL_TYPES)) ;
+		preCCFLAGS += $(CCFLAGS.$(FLAGS_ALL_TYPES)) ;
+		preC++FLAGS += $(C++FLAGS.$(FLAGS_ALL_TYPES)) ;
+		preMFLAGS += $(MFLAGS.$(FLAGS_ALL_TYPES)) ;
+		preMMFLAGS += $(MMFLAGS.$(FLAGS_ALL_TYPES)) ;
+		flagsToRemove += $(FLAGS_TO_REMOVE.$(FLAGS_ALL_TYPES)) ;
+		flagsToAdd += $(FLAGS_TO_ADD.$(FLAGS_ALL_TYPES)) ;
 	}
 
 	local forceIncludes ;
 	on $(TARGET) {
-		postHDRS = $(HDRS.$(ALL_TYPES)) $(postHDRS) ;
+		postHDRS = $(HDRS.$(INCLUDES_ALL_TYPES)) $(postHDRS) ;
 		if $(MSVCNT) {
 			local flags = /I /AI ;
-			postREFERENCEDIRECTORIES = $(flags)\"$(REFERENCEDIRECTORIES.$(ALL_TYPES))\" $(postREFERENCEDIRECTORIES) ;
+			postREFERENCEDIRECTORIES = $(flags)\"$(REFERENCEDIRECTORIES.$(INCLUDES_ALL_TYPES))\" $(postREFERENCEDIRECTORIES) ;
 		}
-		preDEFINES += $(DEFINES.$(ALL_TYPES)) ;
-		preCCFLAGS += $(CCFLAGS.$(ALL_TYPES)) ;
-		preC++FLAGS += $(C++FLAGS.$(ALL_TYPES)) ;
-		preMFLAGS += $(MFLAGS.$(ALL_TYPES)) ;
-		preMMFLAGS += $(MMFLAGS.$(ALL_TYPES)) ;
-		flagsToRemove += $(FLAGS_TO_REMOVE.$(ALL_TYPES)) ;
-		flagsToAdd += $(FLAGS_TO_ADD.$(ALL_TYPES)) ;
+		preDEFINES += $(DEFINES.$(FLAGS_ALL_TYPES)) ;
+		preCCFLAGS += $(CCFLAGS.$(FLAGS_ALL_TYPES)) ;
+		preC++FLAGS += $(C++FLAGS.$(FLAGS_ALL_TYPES)) ;
+		preMFLAGS += $(MFLAGS.$(FLAGS_ALL_TYPES)) ;
+		preMMFLAGS += $(MMFLAGS.$(FLAGS_ALL_TYPES)) ;
+		flagsToRemove += $(FLAGS_TO_REMOVE.$(FLAGS_ALL_TYPES)) ;
+		flagsToAdd += $(FLAGS_TO_ADD.$(FLAGS_ALL_TYPES)) ;
 		forceIncludes = $(FORCE_INCLUDES) ;
 	}
 
@@ -308,10 +315,10 @@ rule C.MultiCppCompile TARGET : SOURCES
 		local objflags ;
 		local objdefines ;
 		on $(_obj) {
-			_hdrs += $(HDRS.$(ALL_TYPES)) ;
+			_hdrs += $(HDRS.$(INCLUDES_ALL_TYPES)) ;
 			objectForceIncludes += $(FORCE_INCLUDES) ;
-			objflags = $($($(BUILD_EXT).FLAGS).$(ALL_TYPES)) ;
-			objdefines = $(DEFINES.$(ALL_TYPES)) ;
+			objflags = $($($(BUILD_EXT).FLAGS).$(FLAGS_ALL_TYPES)) ;
+			objdefines = $(DEFINES.$(FLAGS_ALL_TYPES)) ;
 		}
 		_hdrs += $(postHDRS) $(C.STDHDRS) ;
 
@@ -455,17 +462,20 @@ rule C.Lump PARENT : SOURCES_VARIABLE_NAME : LUMP_NAME : PCH_FILENAMES : EXTRA_I
 	if $(LUMP) = 0 {
 		return ;
 	}
-
+	
 	PARENT = [ _retrieveActiveTargetName $(PARENT) ] ;
 	local grist = $(PARENT) ;
 
 	local PCH_SOURCE_FILENAME = $(PCH_FILENAMES[1]) ;
 	local PCH_HEADER_FILENAME = $(PCH_FILENAMES[2]) ;
 
-	local LUMP_EXT ;
-	LUMP_EXT ?= $(LUMP_NAME:S) ;
-	LUMP_EXT ?= $(PCH_SOURCE_FILENAME:S) ;
-	LUMP_EXT ?= .cpp ;
+	local LUMP_EXT = $(LUMP_NAME:S) ;
+	if ! $(LUMP_EXT) {
+		LUMP_EXT = $(PCH_SOURCE_FILENAME:S) ;
+	}
+	if ! $(LUMP_EXT) {
+		LUMP_EXT = .cpp ;
+	}
 
 	local contents = "/* This lump file is a generated file.  Do not modify. */$(NEWLINE)" ;
 	if $(PCH_SOURCE_FILENAME) {
@@ -526,7 +536,9 @@ actions C.MakeLump
 
 rule C.Application TARGET : SOURCES : OPTIONS
 {
-	local objects = [ C.MultiCppCompile $(TARGET) : $(SOURCES) : $(TARGET) ] ;
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	local objects = [ C.MultiCppCompile $(TARGET) : $(SOURCES) ] ;
+	LINKED_OBJECTS on $(TARGET) += $(objects) ;
 	local linkTargets = [ C.ApplicationFromObjects $(TARGET) : $(objects) : $(OPTIONS) ] ;
 	ActiveTarget ;
 	return $(linkTargets) ;
@@ -625,13 +637,16 @@ rule C.Library TARGET : SOURCES : OPTIONS
 	local linkTargets ;
 	if shared in $(OPTIONS)  ||  module in $(OPTIONS)
 	{
+		TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+
 		local C_LIBRARY_SHARED_MODULE = 1 ;
-		local objects = [ C.MultiCppCompile $(TARGET) : $(SOURCES) : $(TARGET) ] ;
+		local objects = [ C.MultiCppCompile $(TARGET) : $(SOURCES) ] ;
+		LINKED_OBJECTS on $(TARGET) += $(objects) ;
 		linkTargets = [ C.SharedLibraryFromObjects $(TARGET) : $(objects) : $(OPTIONS) ] ;
 	}
 	else
 	{
-		local objects = [ C.MultiCppCompile $(TARGET) : $(SOURCES) : $(TARGET) ] ;
+		local objects = [ C.MultiCppCompile $(TARGET) : $(SOURCES) ] ;
 		linkTargets = [ C.LibraryFromObjects $(TARGET) : $(objects) ] ;
 	}
 	ActiveTarget ;
@@ -1394,7 +1409,7 @@ rule C.OutputSuffix TARGET : SUFFIX : THE_CONFIG : THE_PLATFORM
 rule C.TargetGrist TARGET : FILES
 {
 	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
-	return <$(TARGET)>$(FILES) ;
+	return $(FILES:G=<$(TARGET)>) ;
 }
 
 
