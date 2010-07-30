@@ -1,0 +1,203 @@
+{
+	SUFEXE	?= ".elf" ;
+	SUFLIB	?= .a ;
+	SUFMODULE ?= .so ;
+	SUFOBJ	?= .o ;
+	SUFSHAREDLIB ?= .so ;
+
+	C.Flags CC	: * : -x c ;
+	C.Flags C++	: * : -x c++ ;
+	C.Flags M	: * : -x objective-c ;
+	C.Flags MM	: * : -x objective-c++ ;
+
+	PCHCCFLAGS = -x c-header ;
+	PCHC++FLAGS = -x c++-header ;
+	PCHMFLAGS = -x objective-c-header ;
+	PCHMMFLAGS = -x objective-c++-header ;
+
+	NOARSCAN = true ;
+#	NOARUPDATE = true ;
+}
+
+if ! $(TARGETINFO_LOCATE) {
+
+rule C.FDefines { return -D$(<) ; }
+rule C.FIncludes { return -I$(<) ; }
+rule C.FLibraryPaths { return -L$(<) ; }
+
+
+actions updated together piecemeal response C.Archive
+{
+	"$(C.ARLAUNCH)" $(<:C) "$(C.AR)" @@(-ru $(LIBFLAGS) $(<:C) $(>:C))
+}
+
+actions response screenoutput C.Link
+{
+	Echo @ C.Link patience...
+	"$(C.LINK)" @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:T) --start-group $(LINKLIBS) --end-group) -o $(<[1]:C)
+}
+
+actions together response C.Ranlib
+{
+	"$(C.RANLIB)" $(<:C)
+}
+
+#
+# NOARUPDATE - can't update an archive
+#
+
+if $(NOARUPDATE)
+{
+	actions response C.Archive
+	{
+		"$(C.AR)" -ru $(LIBFLAGS) $(<:C) @@($(>:C))
+	}
+}
+
+actions updated response C.CC
+{
+	"$(C.CC)" -c $(MFLAGS) $(>:C)
+}
+
+actions updated response C.C++
+{
+	REM ECHO $(>:C) - $(MFLAGS) ;
+	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
+	pushd $(<[0]:D\\C)
+	$(C.C++:\\C) -c $(MFLAGS) $(>:C)
+	SET RET=%ERRORLEVEL%
+	popd
+	EXIT /B %RET%
+}
+
+actions updated response C.PCH
+{
+	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+}
+
+
+rule C._ForceIncludeHelper
+{
+	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
+}
+
+
+rule C._C++Exceptions
+{
+	FLAGS_TO_REMOVE.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fno-exceptions ;
+
+	if ! $(TYPE)  ||  $(TYPE) = false
+	{
+		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) -= -fno-exceptions ;
+	}
+	else if $(TYPE) = true
+	{
+		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fexceptions ;
+	}
+}
+
+
+rule C._RuntimeTypeHelper
+{
+	if ! $(TYPE)  ||  $(TYPE) = dynamic
+	{
+	}
+	else if $(TYPE) = static
+	{
+	}
+}
+
+rule C._MultiCppCompile_SetupFlags
+{
+	if $(_pch[1])  &&  ! $(_nopch) {
+		_flags += -Winvalid-pch ;
+
+		local md5 = [ MD5 $(_flags) ] ;
+		local _pchName = @($(_pch[3]:LDBS):G=$(grist)-$(md5)) ;
+		local _pchFilename = $(_pchName).gch ;
+
+		if ! $(built-$(_pchName)) {
+			built-$(_pchName) = 1 ;
+
+			local pchext = $(_pchName:S) ;
+			local pchBUILD_EXT = C.BUILD$(pchext) ;
+
+			MakeLocate $(_pchFilename) : $(LOCATE_TARGET)/$(_pchName:S=:G=)-$(md5) ;
+
+			newsrcs += $(_pchName) ;
+
+			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
+			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -o \"$(_pchFilename:T)\" ;
+
+			#Echo Adding depending of $(_pchFilename) \: $(_pchName) ;
+			Depends $(_pchFilename) : $(_pchName) ;
+			SEARCH on $(_pchName) = $(_hdrs) ;
+		}
+
+		_flags += -include $(_pchFilename:T:S=:C) ;
+
+		# if the source should use pch
+		if $(_pch[2]) {
+			# mark that compilation will depend on it
+			# Echo Adding depending 2 of $(_src) \: $(_pchFilename) ;
+			Includes $(_src) : $(_pchFilename) ;
+		}
+
+		if $(_pch[3]) {
+			# Echo Adding depending 3 of $(_obj) \: $(_pchFilename) ;
+			Depends $(_obj) : $(_pchFilename) ;
+		}
+	}
+
+	Includes $(_src) : $(objectForceIncludes) ;
+	SEARCH on $(objectForceIncludes) = $(_hdrs) ;
+	_flags += "-include $(objectForceIncludes:G=)" ;
+
+	# If multiple files are sent to compiler at once, this option allows compiler to perform optimisations across modules.	
+	#_flags += "-combine" ;
+	
+	# This option stops multiple files being sent to compiler at once, seems to speed up compile though? Maybe because less optimisations take place?
+	_flags += "-o \"$(_obj:T)\"" ;
+
+	#if $(C_LIBRARY_SHARED_MODULE) {
+	#	_flags += -fPIC ;
+	#}
+}
+
+rule C._SharedLibraryFromObjects_ExportLib
+{
+#			BINDING on $(_tlib) = [ _retrieveOutputName $(TARGET) : SUFLIB ] ;
+	BINDING on $(_tlib) = $(_t) ;
+	MakeLocate $(_tlib) : $(outputPath) ;
+	Depends $(TARGET) : $(_tlib) ;
+	Depends $(_tlib) : $(_t) ;
+	NotFile $(_tlib) ;		# Turn this off for export libraries.
+	_linkTargets += $(_tlib) ;
+
+#			LinkFlags $(TARGET) : -Wl,--out-implib,$(_tlib:T) ;
+}
+
+rule C._SharedLibraryFromObjects_LinkFlags
+{
+	if module in $(OPTIONS) {
+		linkFlags += -shared -fPIC ;
+	} else {
+		on $(TARGET) linkFlags += -shared -fPIC ;
+	}
+}
+
+} # TARGETINFO_LOCATE
+
+C.BUILD_EXTENSIONS = $(SUFOBJ) ;
+C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+C.AddBuildExtensions PCH : .h : C.PCH : "" .gch ;
+
+VSCONFIGMAP.debug	= Debug ;
+VSCONFIGMAP.debrel	= DebRel ;
+VSCONFIGMAP.release	= Release ;
+VSCONFIGMAP.final	= Final ;
+
+VSPLATFORMMAP.ps3	= "Ps3-Sony-Gcc" ;

@@ -1,7 +1,7 @@
 SUBDIRRESET += ASFLAGS HDRS C++FLAGS CCFLAGS ;
 
 C.HDRPATTERN =
-		"^[ 	]*#[ 	]*include[ 	]*[<\"]([^\">]*)[\">].*$" ;
+		"^[ 	]*#[ 	]*include[ 	]*(NUPATH|)[<\"\(]([^\)\">]*)[\)\">].*$" ;
 
 
 
@@ -39,6 +39,9 @@ if ! $(TARGETINFO_LOCATE)
 rule C.HdrRule SOURCE : HEADERS
 {
 	# HdrRule source : headers ;
+	
+	# Fix up NUPLATFORM defines (lowercase by time they reach us here).
+	HEADERS = [ Subst $(HEADERS) : "nuplatform[\\/]" : "$(PF:L)/" ] ;
 
 	# N.B.	This rule is called during binding, potentially after
 	# the fate of many targets has been determined, and must be

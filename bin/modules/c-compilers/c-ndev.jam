@@ -1,0 +1,283 @@
+{
+	SUFEXE	?= .elf ;
+	SUFLIB	?= .a ;
+	SUFMODULE ?= .dll ;
+	SUFOBJ	?= .o ;
+	SUFRES	?= .res ;
+	SUFSHAREDLIB ?= .dll ;
+
+	C.Flags CC	: * : -lang c ;
+	C.Flags C++	: * : -lang c++ ;
+	C.Flags M	: * : -lang objc ;
+	C.Flags MM	: * : -lang objc ;
+
+#	C.Defines * : MINGW ;
+
+	PCHCCFLAGS = -dialect c ;
+	PCHC++FLAGS = -dialect c++ ;
+	PCHMFLAGS = -x objective-c-header ;
+	PCHMMFLAGS = -x objective-c++-header ;
+
+	NOARSCAN = true ;
+	NOARUPDATE = true ;
+}
+
+if ! $(TARGETINFO_LOCATE) {
+
+rule C.FDefines { return -D$(<) ; }
+rule C.FIncludes { return -I$(<) ; }
+rule C.FLibraryPaths { return -L$(<) ; }
+
+
+actions updated together piecemeal response C.Archive
+{
+	"$(C.AR)" @@($(LIBFLAGS) $(<:C) $(>:C))
+}
+
+actions response C.Link
+{
+	"$(C.LINK)" @@(-application $(LINKFLAGS) $(>:C) $(NEEDLIBS:T) $(LINKLIBS) -map $(<:CS=.map)) -o $(<[1]:C)
+}
+
+actions together C.Ranlib
+{
+	"$(C.RANLIB)" $(<:C)
+}
+
+#
+# NOARUPDATE - can't update an archive
+#
+
+if $(NOARUPDATE)
+{
+	actions response C.Archive
+	{
+		"$(C.AR)" @@(-library $(LIBFLAGS) -proc gekko $(>:C)) -o $(<:C)
+	}
+}
+
+actions updated response C.CC
+{
+	"$(C.CC)" -c $(MFLAGS) $(>:C)
+}
+
+#	PATH=$(MSVCNT_BIN_PATH);%PATH%
+#	SET INCLUDE=$(C.STDHDRS:\\J=;)
+#	$(C.C++:\\C) /nologo @@($(MFLAGS)) $(>:C)
+
+# Notes:
+# 1. Using FOR loop to print out filenames, as Jam will only print out first in group.
+# 2. @@( bla ) will put bla into response file and put @responsefile into command line.
+# <[0] gets first output file, :D gets path, :\\ converts '/' to '\' and :C escapes/quotes string
+actions updated response C.C++
+{
+	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
+	"$(C.C++:\\C)" -c $(MFLAGS) $(>:C) -o $(<[0]:D\\C)
+}
+
+actions updated response C.PCH
+{
+	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+}
+
+
+rule C._ForceIncludeHelper
+{
+	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
+}
+
+
+rule C._C++Exceptions
+{
+	if ! $(TYPE)  ||  $(TYPE) = false
+	{	
+		Exit Error \: C._C++Exceptions not implemented on Wii - but a request to turn off has been made ;
+	}
+	else if $(TYPE) = true
+	{
+		Exit Error \: C._C++Exceptions not implemented on Wii - but a request to turn on has been made ;
+	}
+}
+
+rule C._RuntimeTypeHelper
+{
+	if ! $(TYPE)  ||  $(TYPE) = dynamic
+	{
+	}
+	else if $(TYPE) = static
+	{
+	}
+}
+
+rule C._MultiCppCompile_SetupFlags
+{
+	if $(_pch[1])  &&  ! $(_nopch) {
+		#_flags += -Winvalid-pch ;
+
+		local md5 = [ MD5 $(_flags) ] ;
+		local _pchName = @($(_pch[3]:LDBS):G=$(grist)-$(md5)) ;
+		local _pchFilename = $(_pchName).gch ;
+
+		if ! $(built-$(_pchName)) {
+			built-$(_pchName) = 1 ;
+
+			local pchext = $(_pchName:S) ;
+			local pchBUILD_EXT = C.BUILD$(pchext) ;
+
+			MakeLocate $(_pchFilename) : $(LOCATE_TARGET)/$(_pchName:S=:G=)-$(md5) ;
+
+			newsrcs += $(_pchName) ;
+
+			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
+			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -precompile \"$(_pchFilename:T:\\)\" ;
+
+			#Echo Adding depending of $(_pchFilename) \: $(_pchName) ;
+			Depends $(_pchFilename) : $(_pchName) ;
+			SEARCH on $(_pchName) = $(_hdrs) ;
+		}
+
+		_flags += -include $(_pchFilename:T:\\) ;
+
+		# if the source should use pch
+		if $(_pch[2]) {
+			# mark that compilation will depend on it
+			# Echo Adding depending 2 of $(_src) \: $(_pchFilename) ;
+			Includes $(_src) : $(_pchFilename) ;
+		}
+
+		if $(_pch[3]) {
+			# Echo Adding depending 3 of $(_obj) \: $(_pchFilename) ;
+			Depends $(_obj) : $(_pchFilename) ;
+		}
+	}
+
+	Includes $(_src) : $(objectForceIncludes) ;
+	SEARCH on $(objectForceIncludes) = $(_hdrs) ;
+	_flags += "-include $(objectForceIncludes:G=)" ;
+	
+	# Force one file at a time with this?
+	local gameapiFile = $(_src:TI=.*gameapi.*) ;
+	if "" = $(gameapiFile)
+	{
+	}
+	else
+	{
+		_flags += "-o \"$(_obj:T)\"" ;
+	}
+
+	#_flags += "-precompile \"" + _pchFilename + "\"" ;
+}
+
+rule C._SharedLibraryFromObjects_ExportLib
+{
+#			BINDING on $(_tlib) = [ _retrieveOutputName $(TARGET) : SUFLIB ] ;
+	BINDING on $(_tlib) = $(_t) ;
+	MakeLocate $(_tlib) : $(outputPath) ;
+	Depends $(TARGET) : $(_tlib) ;
+	Depends $(_tlib) : $(_t) ;
+	NotFile $(_tlib) ;		# Turn this off for export libraries.
+	_linkTargets += $(_tlib) ;
+
+#			LinkFlags $(TARGET) : -Wl,--out-implib,$(_tlib:T) ;
+}
+
+rule C._SharedLibraryFromObjects_LinkFlags
+{
+	if module in $(OPTIONS) {
+		linkFlags += -bundle -undefined dynamic_lookup ;
+	} else {
+		local installName =
+			[ C._retrieveVar INSTALL_NAME_PATH : $(TARGET) : $(CONFIG) : $(PLATFORM) ]
+			[ C._retrieveVar INSTALL_NAME_PATH : * : $(CONFIG) : $(PLATFORM) ] ;
+		if ! $(installName)
+		{
+			installName = $(_t:TD) ;
+		}
+		else
+		{
+			installName = $(installName[1]) ;
+		}
+		installName = $(_t:BSR=$(installName)) ;
+		on $(TARGET) linkFlags += -dynamiclib -install_name $(installName) ;
+	}
+}
+
+# Defines that apply to all targets, in all configurations, for Wii platform.
+C.Defines * : 			
+	GEKKO 
+	RVL_OS 
+	EPPC 
+	RVL_SDK 
+	TRK_INTEGRATION 
+	HOLLYWOOD_REV=1 
+	BROADWAY_REV=1 
+	IOP_REV=1 	 
+: * : wii ;
+
+# C++ flags.
+C.C++Flags * :
+	-proc gekko
+	-align powerpc 
+: * : wii ;
+
+# Prebuilt libraries - this seems like a reasonable list of basic libraries required to build any real Wii project.
+# This doesn't include os, gx, dvd, HomeButtonLib as projects will often want to link against the debug versions of these
+# under certain circumstance (out of our control). Perhaps other libraries in this list will need simliar options, but this
+# can at least be a starting point...
+C.LinkPrebuiltLibraries	* :			
+	$(NDEV_ROOT)/lib/NdevExi2A.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ai.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ax.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/axart.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/axfx.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/base.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/db.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/dsp.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/euart.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/exi.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/fs.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ipc.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mem.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mtx.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mix.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/nand.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/kpad.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wpad.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wud.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/bte.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/odenotstub.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/pad.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/sc.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/seq.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/si.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/syn.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/usb.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/vi.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wpad.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/tpl.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/arc.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wenc.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/esp.a
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib/cx.a
+	$(CW_ROOT)PowerPC_EABI_Support/Runtime/Lib/runtime.ppceabi.h.a
+	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib/msl_c.ppceabi.bare.h.a
+	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C++/PPC_EABI/Lib/msl_c++.ppceabi.bare.h.a
+	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib/fdlibm.ppceabi.h.a
+	$(CW_ROOT)PowerPC_EABI_Support/MetroTRK/TRK_Hollywood_Revolution.a
+: * : wii ;
+
+C.BUILD_EXTENSIONS = $(SUFOBJ) .res ;
+C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+C.AddBuildExtensions PCH : .h : C.PCH : "" .gch ;
+
+VSCONFIGMAP.debug	= Debug ;
+VSCONFIGMAP.debrel	= DebRel ;
+VSCONFIGMAP.release	= Release ;
+VSCONFIGMAP.final	= Final ;
+
+VSPLATFORMMAP.wii	= "Wii" ;
+
+} # TARGETINFO_LOCATE
