@@ -1,0 +1,21 @@
+C.AR		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
+C.CC		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+C.C++		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+C.LINK		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
+C.RANLIB	?= "C:\\Work\\powerpc-eabi-ranlib.exe" ;
+
+
+STDHDRS	+= $(NDEV_ROOT)\\RVL_SDK\\include ;
+STDHDRS	+= $(NDEV_ROOT)\\RVL_SDK\\include\\revolution ;
+STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C++\\MSL_Common\\Include ;
+STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C++\\PPC_EABI\\Include ;
+STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\MSL_Common\\Include ;
+STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\PPC_EABI\\Include ;
+
+C.STDHDRS += $(STDHDRS) ; 
+
+C.LinkFlags * : -proc gekko -nodefaults -nostdlib -fp hardware ;
+C.C++Flags * : -fp hardware ;
+C.LinkDirectories * : $(NDEV_ROOT:\\)\\RVL_SDK\\RVL\\lib ;
+
+VSPLATFORMMAP.wii = "Wii" ;

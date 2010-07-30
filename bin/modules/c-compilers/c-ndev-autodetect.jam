@@ -1,0 +1,38 @@
+rule FindCwCompiler
+{
+	local gcc = [ Glob $(CWFOLDER_RVL)PowerPC_EABI_Tools/Command_Line_Tools : mwcceppc.exe ] ;
+	
+	if ! $(gcc)
+	{
+		Echo NDEV \: Could not find compiler ;
+		return ;
+	}
+	
+	CW_ROOT = $(CWFOLDER_RVL) ;
+	NDEV_ROOT = $(NDEV) ;
+	
+	CW_COMMAND_LINE_TOOLS_DIRECTORY = $(CWFOLDER_RVL)PowerPC_EABI_Tools/Command_Line_Tools ;
+
+	COMPILER_ROOT = [ Match (.+)/bin : $(gcc[1]) ] ;
+}
+
+rule C.AutoDetect 
+{
+	FindCwCompiler ;
+
+	if ! $(CW_COMMAND_LINE_TOOLS_DIRECTORY) 
+	{
+		Echo NDEV \: Could not find CW command line tools directory ;
+		return ;
+	}
+
+	COMPILER.$(PLATFORM) = ndev ;
+
+	UseModule c-compilers/c-ndev ;
+	if $(PLATFORM) != *  &&  $(CONFIG) != * {
+		UseModule c-compilers/$(PLATFORM)-ndev ;
+		UseModule c-compilers/$(PLATFORM)-ndev-$(CONFIG) ;
+	}
+
+	return $(COMPILER.$(PLATFORM)) ;
+}

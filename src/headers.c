@@ -53,6 +53,7 @@ static LIST *headers1( const char *file, LIST *hdrscan );
 # include "filesys.h"
 #endif
 
+static const int kHeaderGroup = 2;
 
 /*
  * headers() - scan a target for include files and call HDRRULE
@@ -162,16 +163,16 @@ static LIST *headers1helper(
 	while( fgets( buf, sizeof( buf ), f ) )
 	{
 	    for( i = 0; i < rec; i++ )
-		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
+		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
 	    {
 		/* Copy and terminate extracted string. */
 
 		char buf2[ MAXSYM ];
-		int l = (int)(re[i]->endp[1] - re[i]->startp[1]);
+		int l = (int)(re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup]);
 # ifdef DOWNSHIFT_PATHS
 		if ( dodownshift )
 		{
-		    const char *target = re[i]->startp[1];
+		    const char *target = re[i]->startp[kHeaderGroup];
 		    char *p = buf2;
 
 		    if ( l > 0 )
@@ -185,7 +186,7 @@ static LIST *headers1helper(
 		else
 # endif
 		{
-		memcpy( buf2, re[i]->startp[1], l );
+		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
 		buf2[ l ] = 0;
 		}
 
@@ -306,14 +307,14 @@ headers1(
 	while( fgets( buf, sizeof( buf ), f ) )
 	{
 	    for( i = 0; i < rec; i++ )
-		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
+		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
 	    {
 		/* Copy and terminate extracted string. */
 
 		char buf2[ MAXSYM ];
-		int l = re[i]->endp[1] - re[i]->startp[1];
+		int l = re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup];
 # ifdef DOWNSHIFT_PATHS
-		const char *target = re[i]->startp[1];
+		const char *target = re[i]->startp[kHeaderGroup];
 		char *p = buf2;
 
 		do *p++ = tolower( *target++ );
@@ -321,7 +322,7 @@ headers1(
 
 		*p = 0;
 #else
-		memcpy( buf2, re[i]->startp[1], l );
+		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
 		buf2[ l ] = 0;
 # endif
 		result = list_new( result, buf2, 0 );

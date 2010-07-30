@@ -1,0 +1,4 @@
+IncludeModule c-compilers/c-ndev-autodetect ;
+if [ C.AutoDetect ] {
+	return ;
+}

@@ -1,0 +1,4 @@
+IncludeModule c-compilers/c-ps3gcc-autodetect ;
+if [ C.AutoDetect ] {
+	return ;
+}
