@@ -162,7 +162,7 @@ static LIST *headers1helper(
 	while( fgets( buf, sizeof( buf ), f ) )
 	{
 	    for( i = 0; i < rec; i++ )
-		if( jam_regexec( re[i], buf ) && re[i]->startp[0] )
+		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
 	    {
 		/* Copy and terminate extracted string. */
 
@@ -313,7 +313,7 @@ headers1(
 	while( fgets( buf, sizeof( buf ), f ) )
 	{
 	    for( i = 0; i < rec; i++ )
-		if( jam_regexec( re[i], buf ) && re[i]->startp[0] )
+		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
 	    {
 		/* Copy and terminate extracted string. */
 		// Find last matching group.

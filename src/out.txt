@@ -1667,73 +1667,2044 @@ index 0cce675..ea0f696 100644
  	# N.B.	This rule is called during binding, potentially after
  	# the fate of many targets has been determined, and must be
 diff --git a/src/headers.c b/src/headers.c
-index bfe7407..d6b9c52 100644
+index bfe7407..e7c6c77 100644
 --- a/src/headers.c
 +++ b/src/headers.c
-@@ -53,6 +53,7 @@ static LIST *headers1( const char *file, LIST *hdrscan );
+@@ -53,7 +53,6 @@ static LIST *headers1( const char *file, LIST *hdrscan );
  # include "filesys.h"
  #endif
  
-+static const int kHeaderGroup = 2;
- 
+-
  /*
   * headers() - scan a target for include files and call HDRRULE
-@@ -162,16 +163,16 @@ static LIST *headers1helper(
+  */
+@@ -128,6 +127,7 @@ static LIST *headers1helper(
+ 	char	buf[ 1024 ];
+ 	LIST	*hdrdownshift;
+ 	int	dodownshift = 1;
++	int group = 0;
+ 
+ #ifdef OPT_IMPROVED_PATIENCE_EXT
+ 	static int count = 0;
+@@ -162,16 +162,23 @@ static LIST *headers1helper(
  	while( fgets( buf, sizeof( buf ), f ) )
  	{
  	    for( i = 0; i < rec; i++ )
 -		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
-+		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
++		if( jam_regexec( re[i], buf ) && re[i]->startp[0] )
  	    {
  		/* Copy and terminate extracted string. */
  
  		char buf2[ MAXSYM ];
 -		int l = (int)(re[i]->endp[1] - re[i]->startp[1]);
-+		int l = (int)(re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup]);
++		int l = 0;
++
++		// Find last matching group.
++		while ( re[i]->startp[ group + 1 ] )
++		{
++			++group;
++		}
++		l = (int)(re[i]->endp[group] - re[i]->startp[group]);
  # ifdef DOWNSHIFT_PATHS
  		if ( dodownshift )
  		{
 -		    const char *target = re[i]->startp[1];
-+		    const char *target = re[i]->startp[kHeaderGroup];
++		    const char *target = re[i]->startp[group];
  		    char *p = buf2;
  
  		    if ( l > 0 )
-@@ -185,7 +186,7 @@ static LIST *headers1helper(
+@@ -185,7 +192,7 @@ static LIST *headers1helper(
  		else
  # endif
  		{
 -		memcpy( buf2, re[i]->startp[1], l );
-+		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
++		memcpy( buf2, re[i]->startp[group], l );
  		buf2[ l ] = 0;
  		}
  
-@@ -306,14 +307,14 @@ headers1(
+@@ -306,14 +313,20 @@ headers1(
  	while( fgets( buf, sizeof( buf ), f ) )
  	{
  	    for( i = 0; i < rec; i++ )
 -		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
-+		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
++		if( jam_regexec( re[i], buf ) && re[i]->startp[0] )
  	    {
  		/* Copy and terminate extracted string. */
++		// Find last matching group.
++		int group = 0;
++		while ( re[i]->startp[ group + 1 ] )
++		{
++			++group;
++		}
  
  		char buf2[ MAXSYM ];
 -		int l = re[i]->endp[1] - re[i]->startp[1];
-+		int l = re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup];
++		int l = re[i]->endp[group] - re[i]->startp[group];
  # ifdef DOWNSHIFT_PATHS
 -		const char *target = re[i]->startp[1];
-+		const char *target = re[i]->startp[kHeaderGroup];
++		const char *target = re[i]->startp[group];
  		char *p = buf2;
  
  		do *p++ = tolower( *target++ );
-@@ -321,7 +322,7 @@ headers1(
+@@ -321,7 +334,7 @@ headers1(
  
  		*p = 0;
  #else
 -		memcpy( buf2, re[i]->startp[1], l );
-+		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
++		memcpy( buf2, re[i]->startp[group], l );
  		buf2[ l ] = 0;
  # endif
  		result = list_new( result, buf2, 0 );
+diff --git a/src/out.txt b/src/out.txt
+new file mode 100644
+index 0000000..e10d68c
+--- /dev/null
++++ b/src/out.txt
+@@ -0,0 +1,1944 @@
++diff --git a/bin/modules/c-compilers/c-ndev-autodetect.jam b/bin/modules/c-compilers/c-ndev-autodetect.jam
++new file mode 100644
++index 0000000..2437bf9
++--- /dev/null
+++++ b/bin/modules/c-compilers/c-ndev-autodetect.jam
++@@ -0,0 +1,38 @@
+++rule FindCwCompiler
+++{
+++	local gcc = [ Glob $(CWFOLDER_RVL)PowerPC_EABI_Tools/Command_Line_Tools : mwcceppc.exe ] ;
+++	
+++	if ! $(gcc)
+++	{
+++		Echo NDEV \: Could not find compiler ;
+++		return ;
+++	}
+++	
+++	CW_ROOT = $(CWFOLDER_RVL) ;
+++	NDEV_ROOT = $(NDEV) ;
+++	
+++	CW_COMMAND_LINE_TOOLS_DIRECTORY = $(CWFOLDER_RVL)PowerPC_EABI_Tools/Command_Line_Tools ;
+++
+++	COMPILER_ROOT = [ Match (.+)/bin : $(gcc[1]) ] ;
+++}
+++
+++rule C.AutoDetect 
+++{
+++	FindCwCompiler ;
+++
+++	if ! $(CW_COMMAND_LINE_TOOLS_DIRECTORY) 
+++	{
+++		Echo NDEV \: Could not find CW command line tools directory ;
+++		return ;
+++	}
+++
+++	COMPILER.$(PLATFORM) = ndev ;
+++
+++	UseModule c-compilers/c-ndev ;
+++	if $(PLATFORM) != *  &&  $(CONFIG) != * {
+++		UseModule c-compilers/$(PLATFORM)-ndev ;
+++		UseModule c-compilers/$(PLATFORM)-ndev-$(CONFIG) ;
+++	}
+++
+++	return $(COMPILER.$(PLATFORM)) ;
+++}
++diff --git a/bin/modules/c-compilers/c-ndev.jam b/bin/modules/c-compilers/c-ndev.jam
++new file mode 100644
++index 0000000..aa23530
++--- /dev/null
+++++ b/bin/modules/c-compilers/c-ndev.jam
++@@ -0,0 +1,283 @@
+++{
+++	SUFEXE	?= .elf ;
+++	SUFLIB	?= .a ;
+++	SUFMODULE ?= .dll ;
+++	SUFOBJ	?= .o ;
+++	SUFRES	?= .res ;
+++	SUFSHAREDLIB ?= .dll ;
+++
+++	C.Flags CC	: * : -lang c ;
+++	C.Flags C++	: * : -lang c++ ;
+++	C.Flags M	: * : -lang objc ;
+++	C.Flags MM	: * : -lang objc ;
+++
+++#	C.Defines * : MINGW ;
+++
+++	PCHCCFLAGS = -dialect c ;
+++	PCHC++FLAGS = -dialect c++ ;
+++	PCHMFLAGS = -x objective-c-header ;
+++	PCHMMFLAGS = -x objective-c++-header ;
+++
+++	NOARSCAN = true ;
+++	NOARUPDATE = true ;
+++}
+++
+++if ! $(TARGETINFO_LOCATE) {
+++
+++rule C.FDefines { return -D$(<) ; }
+++rule C.FIncludes { return -I$(<) ; }
+++rule C.FLibraryPaths { return -L$(<) ; }
+++
+++
+++actions updated together piecemeal response C.Archive
+++{
+++	"$(C.AR)" @@($(LIBFLAGS) $(<:C) $(>:C))
+++}
+++
+++actions response C.Link
+++{
+++	"$(C.LINK)" @@(-application $(LINKFLAGS) $(>:C) $(NEEDLIBS:T) $(LINKLIBS) -map $(<:CS=.map)) -o $(<[1]:C)
+++}
+++
+++actions together C.Ranlib
+++{
+++	"$(C.RANLIB)" $(<:C)
+++}
+++
+++#
+++# NOARUPDATE - can't update an archive
+++#
+++
+++if $(NOARUPDATE)
+++{
+++	actions response C.Archive
+++	{
+++		"$(C.AR)" @@(-library $(LIBFLAGS) -proc gekko $(>:C)) -o $(<:C)
+++	}
+++}
+++
+++actions updated response C.CC
+++{
+++	"$(C.CC)" -c $(MFLAGS) $(>:C)
+++}
+++
+++#	PATH=$(MSVCNT_BIN_PATH);%PATH%
+++#	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++#	$(C.C++:\\C) /nologo @@($(MFLAGS)) $(>:C)
+++
+++# Notes:
+++# 1. Using FOR loop to print out filenames, as Jam will only print out first in group.
+++# 2. @@( bla ) will put bla into response file and put @responsefile into command line.
+++# <[0] gets first output file, :D gets path, :\\ converts '/' to '\' and :C escapes/quotes string
+++actions updated response C.C++
+++{
+++	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
+++	"$(C.C++:\\C)" -c $(MFLAGS) $(>:C) -o $(<[0]:D\\C)
+++}
+++
+++actions updated response C.PCH
+++{
+++	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+++}
+++
+++
+++rule C._ForceIncludeHelper
+++{
+++	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
+++}
+++
+++
+++rule C._C++Exceptions
+++{
+++	if ! $(TYPE)  ||  $(TYPE) = false
+++	{	
+++		Exit Error \: C._C++Exceptions not implemented on Wii - but a request to turn off has been made ;
+++	}
+++	else if $(TYPE) = true
+++	{
+++		Exit Error \: C._C++Exceptions not implemented on Wii - but a request to turn on has been made ;
+++	}
+++}
+++
+++rule C._RuntimeTypeHelper
+++{
+++	if ! $(TYPE)  ||  $(TYPE) = dynamic
+++	{
+++	}
+++	else if $(TYPE) = static
+++	{
+++	}
+++}
+++
+++rule C._MultiCppCompile_SetupFlags
+++{
+++	if $(_pch[1])  &&  ! $(_nopch) {
+++		#_flags += -Winvalid-pch ;
+++
+++		local md5 = [ MD5 $(_flags) ] ;
+++		local _pchName = @($(_pch[3]:LDBS):G=$(grist)-$(md5)) ;
+++		local _pchFilename = $(_pchName).gch ;
+++
+++		if ! $(built-$(_pchName)) {
+++			built-$(_pchName) = 1 ;
+++
+++			local pchext = $(_pchName:S) ;
+++			local pchBUILD_EXT = C.BUILD$(pchext) ;
+++
+++			MakeLocate $(_pchFilename) : $(LOCATE_TARGET)/$(_pchName:S=:G=)-$(md5) ;
+++
+++			newsrcs += $(_pchName) ;
+++
+++			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
+++			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -precompile \"$(_pchFilename:T:\\)\" ;
+++
+++			#Echo Adding depending of $(_pchFilename) \: $(_pchName) ;
+++			Depends $(_pchFilename) : $(_pchName) ;
+++			SEARCH on $(_pchName) = $(_hdrs) ;
+++		}
+++
+++		_flags += -include $(_pchFilename:T:\\) ;
+++
+++		# if the source should use pch
+++		if $(_pch[2]) {
+++			# mark that compilation will depend on it
+++			# Echo Adding depending 2 of $(_src) \: $(_pchFilename) ;
+++			Includes $(_src) : $(_pchFilename) ;
+++		}
+++
+++		if $(_pch[3]) {
+++			# Echo Adding depending 3 of $(_obj) \: $(_pchFilename) ;
+++			Depends $(_obj) : $(_pchFilename) ;
+++		}
+++	}
+++
+++	Includes $(_src) : $(objectForceIncludes) ;
+++	SEARCH on $(objectForceIncludes) = $(_hdrs) ;
+++	_flags += "-include $(objectForceIncludes:G=)" ;
+++	
+++	# Force one file at a time with this?
+++	local gameapiFile = $(_src:TI=.*gameapi.*) ;
+++	if "" = $(gameapiFile)
+++	{
+++	}
+++	else
+++	{
+++		_flags += "-o \"$(_obj:T)\"" ;
+++	}
+++
+++	#_flags += "-precompile \"" + _pchFilename + "\"" ;
+++}
+++
+++rule C._SharedLibraryFromObjects_ExportLib
+++{
+++#			BINDING on $(_tlib) = [ _retrieveOutputName $(TARGET) : SUFLIB ] ;
+++	BINDING on $(_tlib) = $(_t) ;
+++	MakeLocate $(_tlib) : $(outputPath) ;
+++	Depends $(TARGET) : $(_tlib) ;
+++	Depends $(_tlib) : $(_t) ;
+++	NotFile $(_tlib) ;		# Turn this off for export libraries.
+++	_linkTargets += $(_tlib) ;
+++
+++#			LinkFlags $(TARGET) : -Wl,--out-implib,$(_tlib:T) ;
+++}
+++
+++rule C._SharedLibraryFromObjects_LinkFlags
+++{
+++	if module in $(OPTIONS) {
+++		linkFlags += -bundle -undefined dynamic_lookup ;
+++	} else {
+++		local installName =
+++			[ C._retrieveVar INSTALL_NAME_PATH : $(TARGET) : $(CONFIG) : $(PLATFORM) ]
+++			[ C._retrieveVar INSTALL_NAME_PATH : * : $(CONFIG) : $(PLATFORM) ] ;
+++		if ! $(installName)
+++		{
+++			installName = $(_t:TD) ;
+++		}
+++		else
+++		{
+++			installName = $(installName[1]) ;
+++		}
+++		installName = $(_t:BSR=$(installName)) ;
+++		on $(TARGET) linkFlags += -dynamiclib -install_name $(installName) ;
+++	}
+++}
+++
+++# Defines that apply to all targets, in all configurations, for Wii platform.
+++C.Defines * : 			
+++	GEKKO 
+++	RVL_OS 
+++	EPPC 
+++	RVL_SDK 
+++	TRK_INTEGRATION 
+++	HOLLYWOOD_REV=1 
+++	BROADWAY_REV=1 
+++	IOP_REV=1 	 
+++: * : wii ;
+++
+++# C++ flags.
+++C.C++Flags * :
+++	-proc gekko
+++	-align powerpc 
+++: * : wii ;
+++
+++# Prebuilt libraries - this seems like a reasonable list of basic libraries required to build any real Wii project.
+++# This doesn't include os, gx, dvd, HomeButtonLib as projects will often want to link against the debug versions of these
+++# under certain circumstance (out of our control). Perhaps other libraries in this list will need simliar options, but this
+++# can at least be a starting point...
+++C.LinkPrebuiltLibraries	* :			
+++	$(NDEV_ROOT)/lib/NdevExi2A.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ai.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ax.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/axart.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/axfx.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/base.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/db.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/dsp.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/euart.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/exi.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/fs.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ipc.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mem.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mtx.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mix.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/nand.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/kpad.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wpad.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wud.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/bte.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/odenotstub.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/pad.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/sc.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/seq.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/si.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/syn.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/usb.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/vi.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wpad.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/tpl.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/arc.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wenc.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/esp.a
+++	$(NDEV_ROOT)/RVL_SDK/RVL/lib/cx.a
+++	$(CW_ROOT)PowerPC_EABI_Support/Runtime/Lib/runtime.ppceabi.h.a
+++	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib/msl_c.ppceabi.bare.h.a
+++	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C++/PPC_EABI/Lib/msl_c++.ppceabi.bare.h.a
+++	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib/fdlibm.ppceabi.h.a
+++	$(CW_ROOT)PowerPC_EABI_Support/MetroTRK/TRK_Hollywood_Revolution.a
+++: * : wii ;
+++
+++C.BUILD_EXTENSIONS = $(SUFOBJ) .res ;
+++C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+++C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+++C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+++C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+++C.AddBuildExtensions PCH : .h : C.PCH : "" .gch ;
+++
+++VSCONFIGMAP.debug	= Debug ;
+++VSCONFIGMAP.debrel	= DebRel ;
+++VSCONFIGMAP.release	= Release ;
+++VSCONFIGMAP.final	= Final ;
+++
+++VSPLATFORMMAP.wii	= "Wii" ;
+++
+++} # TARGETINFO_LOCATE
++diff --git a/bin/modules/c-compilers/c-ndev.jam.bak b/bin/modules/c-compilers/c-ndev.jam.bak
++new file mode 100644
++index 0000000..6688b74
++--- /dev/null
+++++ b/bin/modules/c-compilers/c-ndev.jam.bak
++@@ -0,0 +1,204 @@
+++{
+++	SUFEXE	?= .elf ;
+++	SUFLIB	?= .a ;
+++	SUFMODULE ?= .dll ;
+++	SUFOBJ	?= .o ;
+++	SUFRES	?= .res ;
+++	SUFSHAREDLIB ?= .dll ;
+++
+++	C.Flags CC	: * : -lang c ;
+++	C.Flags C++	: * : -lang c++ ;
+++	C.Flags M	: * : -lang objc ;
+++	C.Flags MM	: * : -lang objc ;
+++
+++#	C.Defines * : MINGW ;
+++
+++	PCHCCFLAGS = -dialect c ;
+++	PCHC++FLAGS = -dialect c++ ;
+++	PCHMFLAGS = -x objective-c-header ;
+++	PCHMMFLAGS = -x objective-c++-header ;
+++
+++	NOARSCAN = true ;
+++	NOARUPDATE = true ;
+++}
+++
+++if ! $(TARGETINFO_LOCATE) {
+++
+++rule C.FDefines { return -D$(<) ; }
+++rule C.FIncludes { return -I$(<) ; }
+++rule C.FLibraryPaths { return -L$(<) ; }
+++
+++
+++actions updated together piecemeal C.Archive
+++{
+++	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
+++}
+++
+++actions C.Link
+++{
+++	"$(C.LINK)" -application $(LINKFLAGS) -o $(<[1]:C) $(>:C) $(NEEDLIBS:T) $(LINKLIBS)
+++}
+++
+++actions together C.Ranlib
+++{
+++	"$(C.RANLIB)" $(<:C)
+++}
+++
+++#
+++# NOARUPDATE - can't update an archive
+++#
+++
+++if $(NOARUPDATE)
+++{
+++	actions C.Archive
+++	{
+++		"$(C.AR)" -library $(LIBFLAGS) -proc gekko $(>:C) -o $(<:C)
+++	}
+++}
+++
+++actions updated response C.CC
+++{
+++	"$(C.CC)" -c $(MFLAGS) $(>:C)
+++}
+++
+++#	PATH=$(MSVCNT_BIN_PATH);%PATH%
+++#	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++#	$(C.C++:\\C) /nologo @@($(MFLAGS) $(>:C))
+++
+++# Notes:
+++# 1. Using FOR loop to print out filenames, as Jam will only print out first in group.
+++# 2. @@( bla ) will put bla into response file and put @responsefile into command line.
+++# <[0] gets first output file, :D gets path, :\\ converts '/' to '\' and :C escapes/quotes string
+++actions updated response C.C++
+++{
+++	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
+++	"$(C.C++:\\C)" @@(-c $(MFLAGS) $(>:C) -o $(<[0]:D\\C))
+++}
+++
+++actions updated response C.PCH
+++{
+++	"$(C.C++)" @@(-c $(MFLAGS) $(>:C))
+++}
+++
+++
+++rule C._ForceIncludeHelper
+++{
+++	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
+++}
+++
+++
+++rule C._C++Exceptions
+++{
+++	FLAGS_TO_REMOVE.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fno-exceptions ;
+++
+++	if ! $(TYPE)  ||  $(TYPE) = false
+++	{
+++		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) -= -fno-exceptions ;
+++	}
+++	else if $(TYPE) = true
+++	{
+++		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fno-exceptions ;
+++	}
+++}
+++
+++
+++rule C._RuntimeTypeHelper
+++{
+++	if ! $(TYPE)  ||  $(TYPE) = dynamic
+++	{
+++	}
+++	else if $(TYPE) = static
+++	{
+++	}
+++}
+++
+++rule C._MultiCppCompile_SetupFlags
+++{
+++	if $(_pch[1])  &&  ! $(_nopch) {
+++		#_flags += -Winvalid-pch ;
+++
+++		local md5 = [ MD5 $(_flags) ] ;
+++		local _pchName = @($(_pch[3]:LDBS):G=$(grist)-$(md5)) ;
+++		local _pchFilename = $(_pchName).gch ;
+++
+++		if ! $(built-$(_pchName)) {
+++			built-$(_pchName) = 1 ;
+++
+++			local pchext = $(_pchName:S) ;
+++			local pchBUILD_EXT = C.BUILD$(pchext) ;
+++
+++			MakeLocate $(_pchFilename) : $(LOCATE_TARGET)/$(_pchName:S=:G=)-$(md5) ;
+++
+++			newsrcs += $(_pchName) ;
+++
+++			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
+++			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -precompile \"$(_pchFilename:T:\\)\" ;
+++
+++			#Echo Adding depending of $(_pchFilename) \: $(_pchName) ;
+++			Depends $(_pchFilename) : $(_pchName) ;
+++			SEARCH on $(_pchName) = $(_hdrs) ;
+++		}
+++
+++		_flags += -include $(_pchFilename:T:\\) ;
+++
+++		# if the source should use pch
+++		if $(_pch[2]) {
+++			# mark that compilation will depend on it
+++			# Echo Adding depending 2 of $(_src) \: $(_pchFilename) ;
+++			Includes $(_src) : $(_pchFilename) ;
+++		}
+++
+++		if $(_pch[3]) {
+++			# Echo Adding depending 3 of $(_obj) \: $(_pchFilename) ;
+++			Depends $(_obj) : $(_pchFilename) ;
+++		}
+++	}
+++
+++	#_flags += "-precompile \"" + _pchFilename + "\"" ;
+++}
+++
+++rule C._SharedLibraryFromObjects_ExportLib
+++{
+++#			BINDING on $(_tlib) = [ _retrieveOutputName $(TARGET) : SUFLIB ] ;
+++	BINDING on $(_tlib) = $(_t) ;
+++	MakeLocate $(_tlib) : $(outputPath) ;
+++	Depends $(TARGET) : $(_tlib) ;
+++	Depends $(_tlib) : $(_t) ;
+++	NotFile $(_tlib) ;		# Turn this off for export libraries.
+++	_linkTargets += $(_tlib) ;
+++
+++#			LinkFlags $(TARGET) : -Wl,--out-implib,$(_tlib:T) ;
+++}
+++
+++rule C._SharedLibraryFromObjects_LinkFlags
+++{
+++	if module in $(OPTIONS) {
+++		linkFlags += -bundle -undefined dynamic_lookup ;
+++	} else {
+++		local installName =
+++			[ C._retrieveVar INSTALL_NAME_PATH : $(TARGET) : $(CONFIG) : $(PLATFORM) ]
+++			[ C._retrieveVar INSTALL_NAME_PATH : * : $(CONFIG) : $(PLATFORM) ] ;
+++		if ! $(installName)
+++		{
+++			installName = $(_t:TD) ;
+++		}
+++		else
+++		{
+++			installName = $(installName[1]) ;
+++		}
+++		installName = $(_t:BSR=$(installName)) ;
+++		on $(TARGET) linkFlags += -dynamiclib -install_name $(installName) ;
+++	}
+++}
+++
+++} # TARGETINFO_LOCATE
+++
+++C.BUILD_EXTENSIONS = $(SUFOBJ) .res ;
+++C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+++C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+++C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+++C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+++C.AddBuildExtensions PCH : .h : C.PCH : "" .gch ;
+++
+++
+++
++diff --git a/bin/modules/c-compilers/c-ps3.jam b/bin/modules/c-compilers/c-ps3.jam
++new file mode 100644
++index 0000000..da5772a
++--- /dev/null
+++++ b/bin/modules/c-compilers/c-ps3.jam
++@@ -0,0 +1,203 @@
+++{
+++	SUFEXE	?= ".elf" ;
+++	SUFLIB	?= .a ;
+++	SUFMODULE ?= .so ;
+++	SUFOBJ	?= .o ;
+++	SUFSHAREDLIB ?= .so ;
+++
+++	C.Flags CC	: * : -x c ;
+++	C.Flags C++	: * : -x c++ ;
+++	C.Flags M	: * : -x objective-c ;
+++	C.Flags MM	: * : -x objective-c++ ;
+++
+++	PCHCCFLAGS = -x c-header ;
+++	PCHC++FLAGS = -x c++-header ;
+++	PCHMFLAGS = -x objective-c-header ;
+++	PCHMMFLAGS = -x objective-c++-header ;
+++
+++	NOARSCAN = true ;
+++#	NOARUPDATE = true ;
+++}
+++
+++if ! $(TARGETINFO_LOCATE) {
+++
+++rule C.FDefines { return -D$(<) ; }
+++rule C.FIncludes { return -I$(<) ; }
+++rule C.FLibraryPaths { return -L$(<) ; }
+++
+++
+++actions updated together piecemeal response C.Archive
+++{
+++	"$(C.ARLAUNCH)" $(<:C) "$(C.AR)" @@(-ru $(LIBFLAGS) $(<:C) $(>:C))
+++}
+++
+++actions response screenoutput C.Link
+++{
+++	Echo @ C.Link patience...
+++	"$(C.LINK)" @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:T) --start-group $(LINKLIBS) --end-group) -o $(<[1]:C)
+++}
+++
+++actions together response C.Ranlib
+++{
+++	"$(C.RANLIB)" $(<:C)
+++}
+++
+++#
+++# NOARUPDATE - can't update an archive
+++#
+++
+++if $(NOARUPDATE)
+++{
+++	actions response C.Archive
+++	{
+++		"$(C.AR)" -ru $(LIBFLAGS) $(<:C) @@($(>:C))
+++	}
+++}
+++
+++actions updated response C.CC
+++{
+++	"$(C.CC)" -c $(MFLAGS) $(>:C)
+++}
+++
+++actions updated response C.C++
+++{
+++	REM ECHO $(>:C) - $(MFLAGS) ;
+++	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
+++	pushd $(<[0]:D\\C)
+++	$(C.C++:\\C) -c $(MFLAGS) $(>:C)
+++	SET RET=%ERRORLEVEL%
+++	popd
+++	EXIT /B %RET%
+++}
+++
+++actions updated response C.PCH
+++{
+++	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+++}
+++
+++
+++rule C._ForceIncludeHelper
+++{
+++	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
+++}
+++
+++
+++rule C._C++Exceptions
+++{
+++	FLAGS_TO_REMOVE.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fno-exceptions ;
+++
+++	if ! $(TYPE)  ||  $(TYPE) = false
+++	{
+++		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) -= -fno-exceptions ;
+++	}
+++	else if $(TYPE) = true
+++	{
+++		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fexceptions ;
+++	}
+++}
+++
+++
+++rule C._RuntimeTypeHelper
+++{
+++	if ! $(TYPE)  ||  $(TYPE) = dynamic
+++	{
+++	}
+++	else if $(TYPE) = static
+++	{
+++	}
+++}
+++
+++rule C._MultiCppCompile_SetupFlags
+++{
+++	if $(_pch[1])  &&  ! $(_nopch) {
+++		_flags += -Winvalid-pch ;
+++
+++		local md5 = [ MD5 $(_flags) ] ;
+++		local _pchName = @($(_pch[3]:LDBS):G=$(grist)-$(md5)) ;
+++		local _pchFilename = $(_pchName).gch ;
+++
+++		if ! $(built-$(_pchName)) {
+++			built-$(_pchName) = 1 ;
+++
+++			local pchext = $(_pchName:S) ;
+++			local pchBUILD_EXT = C.BUILD$(pchext) ;
+++
+++			MakeLocate $(_pchFilename) : $(LOCATE_TARGET)/$(_pchName:S=:G=)-$(md5) ;
+++
+++			newsrcs += $(_pchName) ;
+++
+++			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
+++			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -o \"$(_pchFilename:T)\" ;
+++
+++			#Echo Adding depending of $(_pchFilename) \: $(_pchName) ;
+++			Depends $(_pchFilename) : $(_pchName) ;
+++			SEARCH on $(_pchName) = $(_hdrs) ;
+++		}
+++
+++		_flags += -include $(_pchFilename:T:S=:C) ;
+++
+++		# if the source should use pch
+++		if $(_pch[2]) {
+++			# mark that compilation will depend on it
+++			# Echo Adding depending 2 of $(_src) \: $(_pchFilename) ;
+++			Includes $(_src) : $(_pchFilename) ;
+++		}
+++
+++		if $(_pch[3]) {
+++			# Echo Adding depending 3 of $(_obj) \: $(_pchFilename) ;
+++			Depends $(_obj) : $(_pchFilename) ;
+++		}
+++	}
+++
+++	Includes $(_src) : $(objectForceIncludes) ;
+++	SEARCH on $(objectForceIncludes) = $(_hdrs) ;
+++	_flags += "-include $(objectForceIncludes:G=)" ;
+++
+++	# If multiple files are sent to compiler at once, this option allows compiler to perform optimisations across modules.	
+++	#_flags += "-combine" ;
+++	
+++	# This option stops multiple files being sent to compiler at once, seems to speed up compile though? Maybe because less optimisations take place?
+++	_flags += "-o \"$(_obj:T)\"" ;
+++
+++	#if $(C_LIBRARY_SHARED_MODULE) {
+++	#	_flags += -fPIC ;
+++	#}
+++}
+++
+++rule C._SharedLibraryFromObjects_ExportLib
+++{
+++#			BINDING on $(_tlib) = [ _retrieveOutputName $(TARGET) : SUFLIB ] ;
+++	BINDING on $(_tlib) = $(_t) ;
+++	MakeLocate $(_tlib) : $(outputPath) ;
+++	Depends $(TARGET) : $(_tlib) ;
+++	Depends $(_tlib) : $(_t) ;
+++	NotFile $(_tlib) ;		# Turn this off for export libraries.
+++	_linkTargets += $(_tlib) ;
+++
+++#			LinkFlags $(TARGET) : -Wl,--out-implib,$(_tlib:T) ;
+++}
+++
+++rule C._SharedLibraryFromObjects_LinkFlags
+++{
+++	if module in $(OPTIONS) {
+++		linkFlags += -shared -fPIC ;
+++	} else {
+++		on $(TARGET) linkFlags += -shared -fPIC ;
+++	}
+++}
+++
+++} # TARGETINFO_LOCATE
+++
+++C.BUILD_EXTENSIONS = $(SUFOBJ) ;
+++C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+++C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+++C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+++C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+++C.AddBuildExtensions PCH : .h : C.PCH : "" .gch ;
+++
+++VSCONFIGMAP.debug	= Debug ;
+++VSCONFIGMAP.debrel	= DebRel ;
+++VSCONFIGMAP.release	= Release ;
+++VSCONFIGMAP.final	= Final ;
+++
+++VSPLATFORMMAP.ps3	= "Ps3-Sony-Gcc" ;
++diff --git a/bin/modules/c-compilers/c-ps3gcc-autodetect.jam b/bin/modules/c-compilers/c-ps3gcc-autodetect.jam
++new file mode 100644
++index 0000000..fc240c4
++--- /dev/null
+++++ b/bin/modules/c-compilers/c-ps3gcc-autodetect.jam
++@@ -0,0 +1,95 @@
+++rule FindPs3GccCompiler
+++{
+++	PS3_GCC_BIN				= $(SCE_PS3_ROOT)/host-win32/bin ;
+++	PS3_GCC_PPU_BIN			= $(SCE_PS3_ROOT)/host-win32/ppu/bin ;
+++
+++	PS3_GCC_GCC				= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-gcc.exe ] ;
+++	PS3_GCC_G++				= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-g++.exe ] ;
+++	PS3_GCC_LD				= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ld.exe ] ;
+++	PS3_GCC_RANLIB			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ranlib.exe ] ;
+++	PS3_GCC_AR_BAT			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ar-launcher.exe ] ;
+++	PS3_GCC_AR_EXE			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ar.exe ] ;
+++	PS3_GCC_STRIP			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-strip.exe ] ;
+++	
+++	PS3_GCC_MKSELF			= [ Glob $(PS3_GCC_BIN)		: make_fself.exe ] ;
+++	PS3_GCC_MKSELF_NPDRM	= [ Glob $(PS3_GCC_BIN)		: make_fself_npdrm.exe ] ;
+++	
+++	if ! $(PS3_GCC_GCC)
+++	{
+++		Echo PS3 \: GCC \: Could not find GCC compiler ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_G++)
+++	{
+++		Echo PS3 \: GCC \: Could not find G++ compiler ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_LD)
+++	{
+++		Echo PS3 \: GCC \: Could not find LD linker ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_RANLIB)
+++	{
+++		Echo PS3 \: GCC \: Could not find RANLIB optimiser ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_AR_BAT)
+++	{
+++		Echo PS3 \: GCC \: Could not find AR archiver launcher ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_AR_EXE)
+++	{
+++		Echo PS3 \: GCC \: Could not find AR archiver ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_STRIP)
+++	{
+++		Echo PS3 \: GCC \: Could not find stripper ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_MKSELF)
+++	{
+++		Echo PS3 \: GCC \: Could not find self maker ;
+++		return ;
+++	}
+++	
+++	if ! $(PS3_GCC_MKSELF_NPDRM)
+++	{
+++		Echo PS3 \: GCC \: Could not find npdrm self maker ;
+++		return ;
+++	}	
+++	
+++	CELL_ROOT		= $(SCE_PS3_ROOT) ;
+++	COMPILER_ROOT	= $(SCE_PS3_ROOT)/host-win32/ppu/bin ;
+++}
+++
+++rule C.AutoDetect 
+++{
+++	FindPs3GccCompiler ;
+++
+++	if ! $(COMPILER_ROOT) 
+++	{
+++		Echo PS3 \: GCC \: Could not find PS3 GCC tool chain ;
+++		return ;
+++	}
+++
+++	COMPILER.$(PLATFORM) = ps3 ;
+++
+++	UseModule c-compilers/c-ps3 ;
+++	if $(PLATFORM) != *  &&  $(CONFIG) != * {
+++		UseModule c-compilers/$(PLATFORM)-gcc ;
+++		UseModule c-compilers/$(PLATFORM)-gcc-$(CONFIG) ;
+++	}
+++
+++	return $(COMPILER.$(PLATFORM)) ;
+++}
+++
++diff --git a/bin/modules/c-compilers/c-vc-autodetect.jam b/bin/modules/c-compilers/c-vc-autodetect.jam
++index 06037dd..a5552b3 100644
++--- a/bin/modules/c-compilers/c-vc-autodetect.jam
+++++ b/bin/modules/c-compilers/c-vc-autodetect.jam
++@@ -1,4 +1,4 @@
++-VISUAL_STUDIO_FORCE_VERSION = 10.0 ;
+++VISUAL_STUDIO_FORCE_VERSION = 8.0 ;
++ 
++ vs_versions.10.0 = vs2010 ;
++ vs_versions.9.0 = vs2008 ;
++diff --git a/bin/modules/c-compilers/c-vc-autodetect.jam.bak b/bin/modules/c-compilers/c-vc-autodetect.jam.bak
++new file mode 100644
++index 0000000..4192f39
++--- /dev/null
+++++ b/bin/modules/c-compilers/c-vc-autodetect.jam.bak
++@@ -0,0 +1,146 @@
+++<<<<<<< Updated upstream
+++VISUAL_STUDIO_FORCE_VERSION = 10.0 ;
+++=======
+++VISUAL_STUDIO_FORCE_VERSION = 8.0 ;
+++>>>>>>> Stashed changes
+++
+++vs_versions.10.0 = vs2010 ;
+++vs_versions.9.0 = vs2008 ;
+++vs_versions.8.0 = vs2005 ;
+++vs_versions.7.1 = vs2003 ;
+++vs_versions.7.0 = vs2002 ;
+++vs_versions.6.0 = vc6 ;
+++
+++rule FindVisualStudioHelper VERSION {
+++	local compiler ;
+++
+++	switch $(VERSION) {
+++		case 10.0 :
+++			local key = HKEY_CURRENT_USER SOFTWARE Microsoft VisualStudio $(VERSION)_Config InstallDir ;
+++			MSVCNT ?= [ W32_GETREG $(key) ] ;
+++
+++			VS100COMNTOOLS = $(VS100COMNTOOLS:J=" ") ;
+++			if ! $(MSVCNT) && $(VS100COMNTOOLS) {
+++				MSVCNT = $(VS100COMNTOOLS) ;
+++			}
+++			if $(MSVCNT) {
+++				MSVCNT = @(..\\..\\vc:R=$(MSVCNT)) ;
+++				MSVCNT_BIN_PATH = @(../Common7/IDE:R=$(MSVCNT)) ;
+++				compiler = vs2010 ;
+++			}
+++
+++		case 9.0 :
+++			local key = HKEY_LOCAL_MACHINE SOFTWARE Microsoft VisualStudio $(VERSION) InstallDir ;
+++			MSVCNT ?= [ W32_GETREG $(key) ] ;
+++			VS90COMNTOOLS = $(VS90COMNTOOLS:J=" ") ;
+++			if ! $(MSVCNT) && $(VS90COMNTOOLS) {
+++				MSVCNT = $(VS90COMNTOOLS) ;
+++			}
+++			if $(MSVCNT) {
+++				MSVCNT = @(..\\..\\vc:R=$(MSVCNT)) ;
+++				MSVCNT_BIN_PATH = $(MSVCNT)/../Common7/IDE ;
+++				compiler = vs2008 ;
+++			}
+++
+++		case 8.0 :
+++			local key = HKEY_LOCAL_MACHINE SOFTWARE Microsoft VisualStudio $(VERSION) InstallDir ;
+++			MSVCNT ?= [ W32_GETREG $(key) ] ;
+++			if ! $(MSVCNT) && $(VS80COMNTOOLS) {
+++				MSVCNT = $(VS80COMNTOOLS) ;
+++			}
+++			if $(MSVCNT) {
+++				MSVCNT = @(..\\..\\VC:R=$(MSVCNT)) ;
+++				MSVCNT_BIN_PATH = @($(MSVCNT)/../Common7/IDE:R=) ;
+++				compiler = vs2005 ;
+++			}
+++
+++		case 7.1 :
+++			local key = HKEY_LOCAL_MACHINE SOFTWARE Microsoft VisualStudio $(VERSION) InstallDir ;
+++			MSVCNT ?= [ W32_GETREG $(key) ] ;
+++			if ! $(MSVCNT) && $(VS71COMNTOOLS) {
+++				MSVCNT = $(VS71COMNTOOLS) ;
+++			}
+++			if $(MSVCNT) {
+++				MSVCNT = @(..\\..\\vc7:R=$(MSVCNT)) ;
+++				MSVCNT_BIN_PATH = $(MSVCNT)/../Common7/IDE ;
+++				compiler = vs2003 ;
+++			}
+++
+++		case 7.0 :
+++			local key = HKEY_LOCAL_MACHINE SOFTWARE Microsoft
+++				VisualStudio $(VERSION) InstallDir ;
+++			MSVCNT ?= [ W32_GETREG $(key) ] ;
+++			if ! $(MSVCNT) && $(VS70COMNTOOLS) {
+++				MSVCNT = $(VS70COMNTOOLS) ;
+++			}
+++			if $(MSVCNT) {
+++				MSVCNT = $(MSVCNT)\\..\\..\\vc7 ;
+++				MSVCNT = @(..\\..\\vc7:R=$(MSVCNT)) ;
+++				compiler = vs2002 ;
+++			}
+++
+++		case 6.0 :
+++		    local key = HKEY_LOCAL_MACHINE SOFTWARE Microsoft DevStudio $(VERSION) Products "Microsoft Visual C++" ProductDir ;
+++		    MSVCNT ?= [ W32_GETREG $(key) ] ;
+++			MSVCNT_BIN_PATH = "$(MSVCNT)/../Common/MSDev98/Bin" ;
+++			compiler = vc6 ;
+++	}
+++
+++	return $(compiler) ;
+++}
+++
+++
+++rule FindVisualStudio VERSION {
+++	local msvcnt ;
+++	msvcnt = $(MSVCNT) ;
+++	if ! $(msvcnt) {
+++		compiler = [ FindVisualStudioHelper $(VERSION) ] ;
+++	}
+++
+++	return $(compiler) ;
+++}
+++
+++
+++rule C.AutoDetect {
+++	# Do we need to attempt to detect the compiler?
+++	if ! $(COMPILER.$(PLATFORM)) {
+++		if ! $(MSVCNT) {
+++			MSVCNT_BIN_PATH = ;
+++			for ver in $(VISUAL_STUDIO_FORCE_VERSION) 10.0 9.0 8.0 7.1 7.0 6.0 {
+++				COMPILER.$(PLATFORM) = [ FindVisualStudio $(ver) ] ;
+++				if $(COMPILER.$(PLATFORM)) {
+++					break ;
+++				}
+++			}
+++			if ! $(COMPILER.$(PLATFORM)) {
+++				return ;
+++			}
+++		}
+++	}
+++
+++	if $(COMPILER.$(PLATFORM)) in vc6 vs2003 vs2005 vs2008 vs2010 {
+++		MSVCNT = ;
+++		switch $(COMPILER.$(PLATFORM))
+++		{
+++			case vc6 :
+++				COMPILER.$(PLATFORM) = [ FindVisualStudio 6.0 ] ;
+++			case vs2003 :
+++				COMPILER.$(PLATFORM) = [ FindVisualStudio 7.1 ] ;
+++				COMPILER.$(PLATFORM) ?= [ FindVisualStudio 7.0 ] ;
+++			case vs2005 :
+++				COMPILER.$(PLATFORM) = [ FindVisualStudio 8.0 ] ;
+++			case vs2008 :
+++				COMPILER.$(PLATFORM) = [ FindVisualStudio 9.0 ] ;
+++			case vs2010 :
+++				COMPILER.$(PLATFORM) = [ FindVisualStudio 10.0 ] ;
+++		}
+++
+++		IncludeModule c-compilers/c-vc ;
+++		if $(PLATFORM) != *  &&  $(CONFIG) != * {
+++			IncludeModule c-compilers/$(PLATFORM)-vc ;
+++			IncludeModule c-compilers/$(PLATFORM)-vc-$(CONFIG) ;
+++		}
+++
+++		return $(COMPILER.$(PLATFORM)) ;
+++	}
+++}
++diff --git a/bin/modules/c-compilers/c-vc.jam.bak b/bin/modules/c-compilers/c-vc.jam.bak
++new file mode 100644
++index 0000000..ea30faa
++--- /dev/null
+++++ b/bin/modules/c-compilers/c-vc.jam.bak
++@@ -0,0 +1,443 @@
+++{
+++	SUFEXE			= .exe ;
+++	SUFLIB			= .lib ;
+++	SUFMODULE		= .dll ;
+++	SUFOBJ			= .obj ;
+++	SUFSHAREDLIB	= .dll ;
+++	SUFRES			= .res ;
+++
+++	NOARSCAN = true ;
+++	NOARUPDATE = true ;
+++
+++	MSVC_SUBSYSTEM_WINDOWS ?= /SUBSYSTEM:WINDOWS ;
+++	MSVC_SUBSYSTEM_CONSOLE ?= /SUBSYSTEM:CONSOLE ;
+++}
+++
+++IncludeModule c/win32resource ;
+++
+++if ! $(TARGETINFO_LOCATE) {
+++
+++rule C.FDefines { return /D$(<) ; }
+++rule C.FIncludes { return /I"\"$(<)\"" ; }
+++rule C.FLibraryPaths { return \"/LIBPATH:$(<)\" ; }
+++
+++
+++rule C._C++Exceptions
+++{
+++	FLAGS_TO_REMOVE.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += /EHa /EHsc ;
+++
+++	if ! $(TYPE)  ||  $(TYPE) = false
+++	{
+++		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) -= /EHa /EHsc ;
+++	}
+++	else if $(TYPE) = true
+++	{
+++		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += /EHsc ;
+++	}
+++}
+++
+++
+++rule C._RuntimeTypeHelper
+++{
+++	if ! $(TYPE)  ||  $(TYPE) = dynamic
+++	{
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) -= /MDd ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) -= /MD ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) -= /MD ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) += /MTd ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) += /MT ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MT ;
+++
+++		FLAGS_TO_ADD.$(THE_PLATFORM).debug on $(TARGET) += /MDd ;
+++		FLAGS_TO_ADD.$(THE_PLATFORM).release on $(TARGET) += /MD ;
+++		FLAGS_TO_ADD.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MD ;
+++	}
+++	else if $(TYPE) = static
+++	{
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) -= /MTd ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) -= /MT ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) -= /MT ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) += /MDd ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) += /MD ;
+++		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MD ;
+++
+++		FLAGS_TO_ADD.$(THE_PLATFORM).debug on $(TARGET) += /MTd ;
+++		FLAGS_TO_ADD.$(THE_PLATFORM).release on $(TARGET) += /MT ;
+++		FLAGS_TO_ADD.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MT ;
+++	}
+++}
+++
+++
+++if $(COMPILER.$(PLATFORM)) in vc6 vs2002 vs2003
+++{
+++
+++actions response C.Link
+++{
+++	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
+++	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++	"$(C.LINK:\\)" /nologo /out:$(<[1]) @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) "$(LINKLIBS)")
+++}
+++
+++} else {
+++
+++actions response C.Link
+++{
+++	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
+++	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++	"$(C.LINK:\\)" /nologo /out:$(<[1]) @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) "$(LINKLIBS)")
+++}
+++
+++actions response C.DebugLinkWithManifest
+++{
+++	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
+++	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++	"$(C.LINK:\\)" /nologo /out:$(<[1]) @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) "$(LINKLIBS)")
+++	if exist $(MANIFEST).intermediate.manifest "$(C.MT:\\)" -nologo -notify_update -manifest $(MANIFEST).intermediate.manifest -out:$(MANIFEST).embed.manifest &
+++	if "%ERRORLEVEL%" == "1090650113" echo $(MANIFEST_TYPE) 24 "$(MANIFEST).embed.manifest" > "$(MANIFEST).embed.rc" &
+++	"$(C.RC:\\)" /fo $(MANIFEST).embed.res $(MANIFEST).embed.rc &
+++	"$(C.LINK:\\)" /nologo /out:$(<[1]) @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) "$(LINKLIBS)")
+++}
+++
+++actions response C.LinkWithManifest
+++{
+++	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
+++	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++	"$(C.LINK:\\)" /nologo /out:$(<[1]) @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) "$(LINKLIBS)")
+++	"$(C.MT:\\)" -nologo -manifest $(MANIFEST).intermediate.manifest -outputresource:$(<[1]);$(MANIFEST_TYPE)
+++}
+++
+++}
+++
+++
+++actions updated response C.CC
+++{
+++	PATH=$(MSVCNT_BIN_PATH);%PATH%
+++	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++	$(C.CC:\\C) /nologo @@($(MFLAGS) $(>:C))
+++}
+++
+++
+++actions updated response C.C++
+++{
+++	PATH=$(MSVCNT_BIN_PATH);%PATH%
+++	SET INCLUDE=$(C.STDHDRS:\\J=;)
+++	$(C.C++:\\C) /nologo @@($(MFLAGS) $(>:C))
+++}
+++
+++
+++actions together response C.Archive
+++{
+++	PATH=$(MSVCNT_BIN_PATH);%PATH%
+++	$(C.AR:C) /nologo $(LIBFLAGS) /out:$(<:C) @@($(>:\\C))
+++}
+++
+++
+++actions RegSvr32
+++{
+++	regsvr32 /s /c $(1:C)
+++}
+++
+++
+++actions existing UnRegSvr32
+++{
+++	regsvr32 /s /u $(2:C)
+++}
+++
+++########################################################################
+++########################################################################
+++
+++rule C._writeManifest TARGET : _t : MANIFEST_TYPE
+++{
+++	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+++	local grist = $(TARGET) ;
+++
+++	local tempIntermediateManifest = @($(_t[1]).intermediate.manifest:G=$(grist)) ;
+++	MakeLocate $(tempIntermediateManifest) : $(LOCATE_TARGET) ;
+++	Clean clean:$(TARGET) : $(tempIntermediateManifest) ;
+++
+++	if $(CONFIG) = debug
+++	{
+++		local tempEmbeddedManifest = @($(_t[1]).embed.manifest:G=$(grist)) ;
+++		MakeLocate $(tempEmbeddedManifest) : $(LOCATE_TARGET) ;
+++		CONTENTS on $(tempEmbeddedManifest) =
+++"<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+++<assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>
+++</assembly>
+++" ;
+++		WriteFile $(tempEmbeddedManifest) ;
+++		Clean clean:$(TARGET) : $(tempEmbeddedManifest) ;
+++
+++		local tempEmbeddedRc = @($(_t[1]).embed.rc:G=$(grist)) ;
+++		Depends $(tempEmbeddedRc) : $(tempEmbeddedManifest) ;
+++		MakeLocate $(tempEmbeddedRc) : $(LOCATE_TARGET) ;
+++		CONTENTS on $(tempEmbeddedRc) =
+++			"$(MANIFEST_TYPE) /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 24 /* RT_MANIFEST */ \"$(LOCATE_TARGET)/$(_t[1]:G=).embed.manifest\"" ;
+++		WriteFile $(tempEmbeddedRc) ;
+++		Clean clean:$(TARGET) : $(tempEmbeddedRc) ;
+++		Depends $(tempEmbeddedRc) : $(tempEmbeddedManifest) ;
+++
+++		local tempEmbeddedRes = [ C.ResourceCompiler $(TARGET) : $(tempEmbeddedRc) : quiet ] ;
+++		_s += $(tempEmbeddedRes) ;
+++
+++		Depends $(_t[1]) : $(tempIntermediateManifest) $(tempEmbeddedRes) ;
+++		if $(_t[2])
+++		{
+++			Includes $(_t[2]) : $(tempIntermediateManifest) $(tempEmbeddedRes) ;
+++		}
+++	}
+++
+++	MANIFEST_TYPE on $(_t) = $(MANIFEST_TYPE) ;
+++}
+++
+++
+++rule C._linkManifest _t
+++{
+++	MANIFEST on $(_t) = "$(LOCATE_TARGET)/$(_t[1]:G=)" ;
+++}
+++
+++
+++
+++rule C.DefFile TARGET : SOURCES
+++{
+++	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+++	local grist = $(TARGET) ;
+++	SOURCES = $(SOURCES:G=$(grist)) ;
+++	SEARCH on $(SOURCES) = $(SEARCH_SOURCE) ;
+++	Depends $(TARGET) : $(SOURCES) ;
+++	C.LinkFlags $(TARGET) : /DEF:"$(SOURCES:T)" ;
+++}
+++
+++
+++rule C._MultiCppCompile_PreCompile
+++{
+++	if ! $(PLATFORM) in win32 win64 {
+++		OPTIONS += nomanifest ;
+++	}
+++
+++	_VCPDB = vc ;
+++
+++	local vcidb = $(_VCPDB:G=$(grist):S=.idb) ;
+++	_VCPDB = $(_VCPDB:G=$(grist):S=.pdb) ;
+++	MakeLocate $(vcidb) $(_VCPDB) : $(LOCATE_TARGET) ;
+++
+++	Clean clean:$(TARGET) : $(_VCPDB) $(vcidb) ;
+++
+++	if $(__MultiCppCompile_OutputAsTree) = 0 {
+++		local combinedLocateTarget = [ FDirName $(LOCATE_TARGET) ] ;
+++		_postmflags = "/c /Fo\"$(combinedLocateTarget:\\)\\\\\" /Fd\"$(_VCPDB:T)\"" ;
+++	}
+++}
+++
+++rule C._MultiCppCompile_SetupFlags
+++{
+++	if $(postREFERENCEDIRECTORIES[1]) {
+++		_flags += $(postREFERENCEDIRECTORIES) ;
+++	}
+++
+++	local forceIncludeHeader ;
+++	if $(_pch[2]) {
+++		forceIncludeHeader = $(_pch[2]:G=$(grist)|force) ;
+++		BINDING on $(forceIncludeHeader) = $(_pch[3]) ;
+++		SEARCH on $(forceIncludeHeader) = $(_hdrs) ;
+++	}
+++
+++	if $(_pch[4]) {
+++		# add extra flags to enable pch creation
+++		local _pchFilename = $(_pch[3]:LBS).pch ;
+++		local _pchDiskFilename = [ FDirName $(LOCATE_TARGET) $(_pchFilename:BS) ] ;
+++		_flags += /Fp\"$(_pchDiskFilename:\\)\" /Yc\"$(_pch[2])\" /FI\"$(_pch[2])\" ;
+++		# mark that it will be created by compilation through srcref
+++		_pchFilename = $(_pchFilename:G=$(grist)) ;
+++		BINDING on $(_pchFilename) = $(_pchFilename:BS) ;
+++		MakeLocate $(_pchFilename) : $(LOCATE_TARGET) ;
+++		Depends $(_pchFilename) : $(_src) ;
+++		Clean clean:$(TARGET) : $(_pchFilename) ;
+++		Includes $(_src) : $(forceIncludeHeader) ;
+++
+++	# if the source should use pch
+++	} else if $(_pch[2]) && ! $(_nopch) {
+++		# add extra flags to enable pch loading
+++		local _pchFilename = $(_pch[3]:LBS).pch ;
+++		local _pchDiskFilename = [ FDirName $(LOCATE_TARGET) $(_pchFilename:BS) ] ;
+++		_flags += /Fp\"$(_pchDiskFilename:\\)\" /Yu\"$(_pch[2])\" /FI\"$(_pch[2])\" ;
+++		# mark that compilation will depend on it
+++		_pchFilename = $(_pchFilename:G=$(grist)) ;
+++		Includes $(_src) : $(_pchFilename) ;
+++		Includes $(_src) : $(forceIncludeHeader) ;
+++	}
+++
+++	if $(objectForceIncludes[1]) {
+++		Includes $(_src) : $(objectForceIncludes) ;
+++		SEARCH on $(objectForceIncludes) = $(_hdrs) ;
+++		_flags += "/FI\"$(objectForceIncludes:G=)\"" ;
+++	}
+++
+++	# bind flags, defines and includes to the target
+++	_flags += $(_postmflags) ;
+++}
+++
+++rule C._MultiCppCompile_PchDeps
+++{
+++	if $(_pch1[4]) {
+++		local _pchFilename = $(_pch1[3]:LBS).pch ;
+++		_pchFilename = $(_pchFilename:G=$(grist)) ;
+++		Depends $(objects) : $(_pchFilename) ;
+++		# add that pch as output
+++		objects += $(_pchFilename) ;
+++	}
+++}
+++
+++rule C._MultiCppCompile_PostCompile
+++{
+++	if $(COMPILER.$(PLATFORM)) in vc6 vs2003 vs2005 vs2008 vs2010 {
+++		SEMAPHORE on $(objects) = $(_VCPDB) ;
+++	}
+++}
+++
+++
+++rule C._ApplicationFromObjects_Setup
+++{
+++	if $(COMPILER.$(PLATFORM)) in vs2005 vs2008 vs2010  &&  ! ( nomanifest in $(OPTIONS) ) {
+++		OPTIONS += manifest ;
+++	}
+++
+++	if $(COMPILER.$(PLATFORM)) in vc6 vs2003 vs2005 vs2008 vs2010  &&  ! ( windows in $(OPTIONS) ) {
+++		OPTIONS += console ;
+++	}
+++}
+++
+++rule C._ApplicationFromObjects_CleanIntermediates
+++{
+++	# Clean the .pdb (etc) files.
+++	local sufs = .pdb .map .lib .exp .ilk ;
+++	local zap = $(_t:S=$(sufs)) $(_t).manifest ;
+++	MakeLocate $(zap) : $(outputPath) ;
+++	Clean clean:$(TARGET) : $(zap) ;
+++
+++	Depends $(zap) : $(_linkTargets) ;
+++}
+++
+++
+++rule C._ApplicationFromObjects_LinkFlags
+++{
+++	if windows in $(OPTIONS) {
+++		linkFlags += $(MSVC_SUBSYSTEM_WINDOWS) ;
+++	} else if console in $(OPTIONS) {
+++		linkFlags += $(MSVC_SUBSYSTEM_CONSOLE) ;
+++	}
+++
+++	if manifest in $(OPTIONS) {
+++		C._writeManifest $(TARGET) : $(_t) : 1 ;
+++		C._linkManifest $(_t) ;
+++		linkFlags += /MANIFEST /MANIFESTFILE:$(LOCATE_TARGET)/$(_t:G=).intermediate.manifest ;
+++	}
+++
+++	if $(COMPILER.$(PLATFORM)) != vc6 {
+++		if manifest in $(OPTIONS) {
+++			if $(CONFIG) = debug {
+++				linkRule = C.DebugLinkWithManifest ;
+++			} else {
+++				linkRule = C.LinkWithManifest ;
+++			}
+++		}
+++	}
+++}
+++
+++
+++rule C._ApplicationFromObjects_PostBuild
+++{
+++}
+++
+++
+++rule C._SharedLibraryFromObjects_Setup
+++{
+++	if $(COMPILER.$(PLATFORM)) in vs2005 vs2008 vs2010  &&  ! ( nomanifest in $(OPTIONS) ) {
+++		OPTIONS += manifest ;
+++	}
+++}
+++
+++rule C._SharedLibraryFromObjects_ExportLib
+++{
+++	BINDING on $(_tlib) = [ C._retrieveOutputName $(TARGET) : SUFLIB ] ;
+++	Depends $(TARGET) : $(_tlib) ;
+++	Depends $(_tlib) : $(_t) ;
+++	MightNotUpdate $(_tlib) ;
+++	_linkTargets += $(_tlib) ;
+++}
+++
+++rule C._SharedLibraryFromObjects_UnRegServer
+++{
+++	if regserver in $(OPTIONS) {
+++		regserver = true ;
+++
+++		local unregserver = clean:$(TARGET):unregserver ;
+++		Depends clean:$(TARGET) : $(unregserver) ;
+++		NotFile $(unregserver) ;
+++		Always $(unregserver) ;
+++		UnRegSvr32 clean:$(TARGET):unregserver : $(_linkTargets[1]) ;
+++	}
+++}
+++
+++rule C._SharedLibraryFromObjects_CleanIntermediates
+++{
+++	# Clean the .pdb (etc) files.
+++	local sufs = .pdb .map .exp .ilk ;
+++	local zap = $(_t:S=$(sufs)) $(_t).manifest ;
+++	MakeLocate $(zap) : $(outputPath) ;
+++	Clean clean:$(TARGET) : $(zap) ;
+++
+++	Depends $(zap) : $(_linkTargets) ;
+++}
+++
+++rule C._SharedLibraryFromObjects_LinkFlags
+++{
+++	if ! ( nodefaults in $(OPTIONS) ) {
+++		if windows in $(OPTIONS) {
+++			linkFlags += $(MSVC_SUBSYSTEM_WINDOWS) ;
+++		} else {
+++			linkFlags += $(MSVC_SUBSYSTEM_CONSOLE) ;
+++		}
+++	}
+++	linkFlags += /DLL ;
+++
+++	if ( nomanifest in $(OPTIONS) ) {
+++		linkFlags -= /INCREMENTAL ;
+++	} else if manifest in $(OPTIONS) {
+++		C._writeManifest $(TARGET) : $(_linkTargets) : 2 ;
+++		C._linkManifest $(_linkTargets) ;
+++		linkFlags += /MANIFEST /MANIFESTFILE:$(LOCATE_TARGET)/$(_t:G=).intermediate.manifest ;
+++	}
+++
+++	if $(COMPILER.$(PLATFORM)) != vc6 {
+++		if manifest in $(OPTIONS) {
+++			if $(CONFIG) = debug {
+++				linkRule = C.DebugLinkWithManifest ;
+++			} else {
+++				linkRule = C.LinkWithManifest ;
+++			}
+++		}
+++	}
+++}
+++
+++
+++rule C._SharedLibraryFromObjects_RegServer
+++{
+++	if $(regserver) {
+++		RegSvr32 $(_linkTargets[1]) ;
+++	}
+++}
+++
+++} else {  # TARGETINFO_LOCATE
+++
+++rule C.DefFile TARGET : SOURCES
+++{
+++}
+++
+++} # TARGETINFO_LOCATE
+++
+++C.BUILD_EXTENSIONS = $(SUFOBJ) .res ;
+++C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+++C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+++
+++C.CFlags * : /TC : * : * ;
+++C.C++Flags * : /TP : * : * ;
++diff --git a/bin/modules/c-compilers/ps3-autodetect.jam b/bin/modules/c-compilers/ps3-autodetect.jam
++new file mode 100644
++index 0000000..544db5e
++--- /dev/null
+++++ b/bin/modules/c-compilers/ps3-autodetect.jam
++@@ -0,0 +1,4 @@
+++IncludeModule c-compilers/c-ps3gcc-autodetect ;
+++if [ C.AutoDetect ] {
+++	return ;
+++}
++diff --git a/bin/modules/c-compilers/ps3-gcc.jam b/bin/modules/c-compilers/ps3-gcc.jam
++new file mode 100644
++index 0000000..ea98d1b
++--- /dev/null
+++++ b/bin/modules/c-compilers/ps3-gcc.jam
++@@ -0,0 +1,128 @@
+++# "C:/Program Files (x86)/SN Systems/Common/VSI/bin/gcc2vs.exe" 
+++
+++C.ARLAUNCH	?= "$(PS3_GCC_AR_BAT)" ;
+++C.AR		?= "$(PS3_GCC_AR_EXE)" ;
+++C.CC		?= "$(PS3_GCC_GCC)" ;
+++C.C++		?= "$(PS3_GCC_GCC)" ;
+++C.LINK		?= "$(PS3_GCC_GCC)" ;
+++C.RANLIB	?= "$(PS3_GCC_RANLIB)" ;
+++
+++
+++STDHDRS	+= $(CELL_ROOT)/target/ppu/include ;
+++STDHDRS	+= $(CELL_ROOT)/target/ppu/include/cell ;
+++
+++C.STDHDRS += $(STDHDRS) ; 
+++
+++C.Defines * : 
+++	__GCC__
+++	__CELLOS_LV2__
+++	;
+++	
+++# -------------------------------------------------------------------------------------
+++
+++rule Strip TARGET : STRIPPED : UNSTRIPPED
+++{
+++	MakeLocate $(STRIPPED) : $(LOCATE_TARGET) ;
+++	Depends $(TARGET) : $(STRIPPED) : $(UNSTRIPPED) ;
+++	Clean clean:$(TARGET) : $(STRIPPED) ;
+++	PS3.Strip $(STRIPPED) : $(UNSTRIPPED) ;
+++}
+++
+++actions PS3.Strip
+++{
+++	$(PS3_GCC_STRIP) -s -o $(1) $(2)
+++}
+++
+++# -------------------------------------------------------------------------------------
+++
+++rule MakeSelf TARGET : SELF : ELF
+++{
+++	MakeLocate $(SELF) : $(LOCATE_TARGET) ;
+++	Depends $(TARGET) : $(SELF) : $(ELF) ;
+++	Clean clean:$(TARGET) : $(SELF) ;
+++	PS3.Self $(SELF) : $(ELF) ;
+++}
+++
+++actions PS3.Self
+++{
+++	$(PS3_GCC_MKSELF) $(2) $(1)
+++}
+++
+++# -------------------------------------------------------------------------------------
+++
+++rule MakeSelfNpdrm TARGET : SELF : ELF
+++{
+++	MakeLocate $(SELF) : $(LOCATE_TARGET) ;
+++	Depends $(TARGET) : $(SELF) : $(ELF) ;
+++	Clean clean:$(TARGET) : $(SELF) ;
+++	PS3.SelfNpdrm $(SELF) : $(ELF) ;
+++}
+++
+++actions PS3.SelfNpdrm
+++{
+++	$(PS3_GCC_MKSELF_NPDRM) $(2) $(1)
+++}
+++
+++# -------------------------------------------------------------------------------------
+++
+++rule MakeEboot TARGET : BIN : STRIPPED_SELF
+++{
+++	MakeLocate $(BIN) : $(LOCATE_TARGET) ;
+++	Depends $(TARGET) : $(BIN) : $(STRIPPED_SELF) ;
+++	Clean clean:$(TARGET) : $(BIN) ;
+++	PS3.Eboot $(BIN) : $(STRIPPED_SELF) ;
+++}
+++
+++actions PS3.Eboot
+++{
+++	COPY $(2:\\T) $(1:\\T) > NUL
+++}
+++
+++# -------------------------------------------------------------------------------------
+++
+++rule DisplaySNBin TARGET : BIN
+++{
+++	PS3.SNBin $(BIN) ;
+++}
+++
+++actions PS3.SNBin
+++{
+++	$(TT)/nu2api/bintool/snbin.exe -dsi $(1:\\T)
+++}
+++
+++# -------------------------------------------------------------------------------------
+++
+++rule C._ApplicationFromObjects_PostBuild
+++{	
+++	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+++	local _t ;
+++	on $(TARGET) _t = $(LINK_TARGET) ;
+++	
+++	# Our various output files.
+++	local elf				= $(_t) ;
+++	local self				= $(_t:S=.self) ;
+++	local strippedElf		= $(_t:S=.stripped.elf) ;
+++	local strippedSelf		= $(_t:S=.stripped.self) ;
+++	local strippedNpdrmSelf	= $(_t:S=.stripped.npdrm.self) ;
+++	local ebootBin			= $(_t:B=EBOOT:S=.$(CONFIG).BIN) ;
+++	
+++	# Make self from elf
+++	MakeSelf $(TARGET) : $(self) : $(elf) ;
+++	
+++	# Strip elf to make .stripped.elf
+++	Strip $(TARGET) : $(strippedElf) : $(elf) ;
+++
+++	# Make stripped self from stripped elf
+++	MakeSelf $(TARGET) : $(strippedSelf) : $(strippedElf) ;
+++
+++	# Make stripped npdrm self from stripped elf
+++	MakeSelfNpdrm $(TARGET) : $(strippedNpdrmSelf) : $(strippedElf) ;
+++	
+++	# Make EBOOT.BIN from stripped self
+++	MakeEboot $(TARGET) : $(ebootBin) : $(strippedSelf) ;
+++	
+++	# Display section size information.
+++	DisplaySNBin $(TARGET) : $(ebootBin) ;
+++}
+++
+++# -------------------------------------------------------------------------------------
++diff --git a/bin/modules/c-compilers/wii-autodetect.jam b/bin/modules/c-compilers/wii-autodetect.jam
++new file mode 100644
++index 0000000..d719986
++--- /dev/null
+++++ b/bin/modules/c-compilers/wii-autodetect.jam
++@@ -0,0 +1,4 @@
+++IncludeModule c-compilers/c-ndev-autodetect ;
+++if [ C.AutoDetect ] {
+++	return ;
+++}
++diff --git a/bin/modules/c-compilers/wii-ndev.jam b/bin/modules/c-compilers/wii-ndev.jam
++new file mode 100644
++index 0000000..bd02688
++--- /dev/null
+++++ b/bin/modules/c-compilers/wii-ndev.jam
++@@ -0,0 +1,21 @@
+++C.AR		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
+++C.CC		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+++C.C++		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+++C.LINK		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
+++C.RANLIB	?= "C:\\Work\\powerpc-eabi-ranlib.exe" ;
+++
+++
+++STDHDRS	+= $(NDEV_ROOT)\\RVL_SDK\\include ;
+++STDHDRS	+= $(NDEV_ROOT)\\RVL_SDK\\include\\revolution ;
+++STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C++\\MSL_Common\\Include ;
+++STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C++\\PPC_EABI\\Include ;
+++STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\MSL_Common\\Include ;
+++STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\PPC_EABI\\Include ;
+++
+++C.STDHDRS += $(STDHDRS) ; 
+++
+++C.LinkFlags * : -proc gekko -nodefaults -nostdlib -fp hardware ;
+++C.C++Flags * : -fp hardware ;
+++C.LinkDirectories * : $(NDEV_ROOT:\\)\\RVL_SDK\\RVL\\lib ;
+++
+++VSPLATFORMMAP.wii = "Wii" ;
++diff --git a/bin/modules/c.jam b/bin/modules/c.jam
++index 0cce675..ea0f696 100644
++--- a/bin/modules/c.jam
+++++ b/bin/modules/c.jam
++@@ -1,7 +1,7 @@
++ SUBDIRRESET += ASFLAGS HDRS C++FLAGS CCFLAGS ;
++ 
++ C.HDRPATTERN =
++-		"^[ 	]*#[ 	]*include[ 	]*[<\"]([^\">]*)[\">].*$" ;
+++		"^[ 	]*#[ 	]*include[ 	]*(NUPATH|)[<\"\(]([^\)\">]*)[\)\">].*$" ;
++ 
++ 
++ 
++@@ -39,6 +39,9 @@ if ! $(TARGETINFO_LOCATE)
++ rule C.HdrRule SOURCE : HEADERS
++ {
++ 	# HdrRule source : headers ;
+++	
+++	# Fix up NUPLATFORM defines (lowercase by time they reach us here).
+++	HEADERS = [ Subst $(HEADERS) : "nuplatform[\\/]" : "$(PF:L)/" ] ;
++ 
++ 	# N.B.	This rule is called during binding, potentially after
++ 	# the fate of many targets has been determined, and must be
++diff --git a/src/headers.c b/src/headers.c
++index bfe7407..d6b9c52 100644
++--- a/src/headers.c
+++++ b/src/headers.c
++@@ -53,6 +53,7 @@ static LIST *headers1( const char *file, LIST *hdrscan );
++ # include "filesys.h"
++ #endif
++ 
+++static const int kHeaderGroup = 2;
++ 
++ /*
++  * headers() - scan a target for include files and call HDRRULE
++@@ -162,16 +163,16 @@ static LIST *headers1helper(
++ 	while( fgets( buf, sizeof( buf ), f ) )
++ 	{
++ 	    for( i = 0; i < rec; i++ )
++-		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
+++		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
++ 	    {
++ 		/* Copy and terminate extracted string. */
++ 
++ 		char buf2[ MAXSYM ];
++-		int l = (int)(re[i]->endp[1] - re[i]->startp[1]);
+++		int l = (int)(re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup]);
++ # ifdef DOWNSHIFT_PATHS
++ 		if ( dodownshift )
++ 		{
++-		    const char *target = re[i]->startp[1];
+++		    const char *target = re[i]->startp[kHeaderGroup];
++ 		    char *p = buf2;
++ 
++ 		    if ( l > 0 )
++@@ -185,7 +186,7 @@ static LIST *headers1helper(
++ 		else
++ # endif
++ 		{
++-		memcpy( buf2, re[i]->startp[1], l );
+++		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
++ 		buf2[ l ] = 0;
++ 		}
++ 
++@@ -306,14 +307,14 @@ headers1(
++ 	while( fgets( buf, sizeof( buf ), f ) )
++ 	{
++ 	    for( i = 0; i < rec; i++ )
++-		if( jam_regexec( re[i], buf ) && re[i]->startp[1] )
+++		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
++ 	    {
++ 		/* Copy and terminate extracted string. */
++ 
++ 		char buf2[ MAXSYM ];
++-		int l = re[i]->endp[1] - re[i]->startp[1];
+++		int l = re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup];
++ # ifdef DOWNSHIFT_PATHS
++-		const char *target = re[i]->startp[1];
+++		const char *target = re[i]->startp[kHeaderGroup];
++ 		char *p = buf2;
++ 
++ 		do *p++ = tolower( *target++ );
++@@ -321,7 +322,7 @@ headers1(
++ 
++ 		*p = 0;
++ #else
++-		memcpy( buf2, re[i]->startp[1], l );
+++		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
++ 		buf2[ l ] = 0;
++ # endif
++ 		result = list_new( result, buf2, 0 );
++diff --git a/tests/shader/GenerateWorkSpaceVs2005.bat b/tests/shader/GenerateWorkSpaceVs2005.bat
++new file mode 100644
++index 0000000..5cc4c56
++--- /dev/null
+++++ b/tests/shader/GenerateWorkSpaceVs2005.bat
++@@ -0,0 +1,7 @@
+++@ECHO OFF
+++PUSHD %~dp0
+++jam --workspace -gen=vs2005 -compiler=vs2005 Source/App/Jamfile.jam Build
+++if "%ERRORLEVEL%" == "0" (
+++ECHO %~dp0Build\_workspace.vs2005_\JamTest.sln > %~dp0\EditWorkSpaceVs2005.bat
+++)
+++POPD
++\ No newline at end of file
++diff --git a/tests/shader/Source/App/Jamfile.jam b/tests/shader/Source/App/Jamfile.jam
++new file mode 100644
++index 0000000..e616395
++--- /dev/null
+++++ b/tests/shader/Source/App/Jamfile.jam
++@@ -0,0 +1,13 @@
+++SubDir TOP App ;
+++
+++SubInclude TOP Shaders ;
+++SubInclude TOP Lib ;
+++
+++# Apply shaders to JamTest target.
+++ApplyShaders JamTest : shaders : JamTest ;
+++
+++# Make JamTest link against JamLib.
+++C.LinkLibraries	JamTest : JamLib ; 
+++
+++# Make JamTest from main.cpp.
+++C.Application JamTest : main.cpp main.h ;
++diff --git a/tests/shader/Source/App/main.cpp b/tests/shader/Source/App/main.cpp
++new file mode 100644
++index 0000000..f078042
++--- /dev/null
+++++ b/tests/shader/Source/App/main.cpp
++@@ -0,0 +1,7 @@
+++#include "main.h"
+++#include "blursShaders.h"
+++
+++int main( )
+++{
+++	return BLURSSHADERSAdd( 1, 2 );
+++}
++diff --git a/tests/shader/Source/App/main.h b/tests/shader/Source/App/main.h
++new file mode 100644
++index 0000000..e69de29
++diff --git a/tests/shader/Source/Lib/Jamfile.jam b/tests/shader/Source/Lib/Jamfile.jam
++new file mode 100644
++index 0000000..e63147b
++--- /dev/null
+++++ b/tests/shader/Source/Lib/Jamfile.jam
++@@ -0,0 +1,7 @@
+++SubDir TOP Lib ;
+++
+++# Apply shaders to JamLib target.
+++ApplyShaders JamLib : shaders ;
+++
+++# Make JamLib from lib.cpp.
+++C.Library JamLib : lib.cpp ;
++diff --git a/tests/shader/Source/Lib/lib.cpp b/tests/shader/Source/Lib/lib.cpp
++new file mode 100644
++index 0000000..1827b78
++--- /dev/null
+++++ b/tests/shader/Source/Lib/lib.cpp
++@@ -0,0 +1,7 @@
+++#include "copytexshaders.h"
+++#include "blursshaders.h"
+++
+++int F( )
+++{
+++	return BLURSSHADERSAdd( 1, 2 ) - COPYTEXSHADERSAdd( 2, 3 );
+++};
++diff --git a/tests/shader/Source/Shaders/Jamfile.jam b/tests/shader/Source/Shaders/Jamfile.jam
++new file mode 100644
++index 0000000..03d0c37
++--- /dev/null
+++++ b/tests/shader/Source/Shaders/Jamfile.jam
++@@ -0,0 +1,12 @@
+++SubDir TOP Shaders ;
+++
+++# List of hlsl sources to build.
+++HLSL_SRCS =
+++	blurs.hlsl
+++	copytex.hlsl
+++	blursInclude.hlsl
+++	shared.hlsl
+++;
+++
+++# Generate shaders target from the hlsl source.
+++GenerateShaders shaders : $(HLSL_SRCS) ;
++diff --git a/tests/shader/Source/Shaders/blurs.hlsl b/tests/shader/Source/Shaders/blurs.hlsl
++new file mode 100644
++index 0000000..a5ed5db
++--- /dev/null
+++++ b/tests/shader/Source/Shaders/blurs.hlsl
++@@ -0,0 +1,2 @@
+++#include "blursInclude.hlsl"
+++#include "shared.hlsl"
++diff --git a/tests/shader/Source/Shaders/blursInclude.hlsl b/tests/shader/Source/Shaders/blursInclude.hlsl
++new file mode 100644
++index 0000000..e69de29
++diff --git a/tests/shader/Source/Shaders/copytex.hlsl b/tests/shader/Source/Shaders/copytex.hlsl
++new file mode 100644
++index 0000000..44be482
++--- /dev/null
+++++ b/tests/shader/Source/Shaders/copytex.hlsl
++@@ -0,0 +1 @@
+++#include "shared.hlsl"
++diff --git a/tests/shader/Source/Shaders/shared.hlsl b/tests/shader/Source/Shaders/shared.hlsl
++new file mode 100644
++index 0000000..e69de29
++diff --git a/tests/shader/Source/TOP.jamrules b/tests/shader/Source/TOP.jamrules
++new file mode 100644
++index 0000000..c4afb28
++--- /dev/null
+++++ b/tests/shader/Source/TOP.jamrules
++@@ -0,0 +1,66 @@
+++# This rule will apply the shaders to a given project, and makes sure dependencies are setup correctly.
+++rule ApplyShaders PARENTS : SHADERS : WORKSPACENAME
+++{			
+++	# Get list of hlsl-headers from parent.
+++	local headers ;		
+++	on $(SHADERS) headers = $(HLSL_HEADERS) ;	
+++	
+++	# Go through each header.
+++	for header in $(headers)
+++	{
+++		# Get the name of this header, gristed for the current target.
+++		local gristedHeader = $(header:BSG=$(PARENTS)) ;
+++		
+++		# Force dependencies for this gristed header.
+++		ForceCare $(gristedHeader) ;	
+++			
+++		# Setup a dependency between the gristed header and the real header.
+++		Depends $(gristedHeader) : $(header) ;	
+++	}
+++	
+++	# Setup include directories.
+++	C.IncludeDirectories $(PARENTS) : $(header:P) ;
+++
+++	if $(WORKSPACENAME)
+++	{
+++		# Add project to workspace - I'm not sure if there is a nicer way to do this than passing WORKSPACENAME in here?
+++		Workspace $(WORKSPACENAME) : $(SHADERS) ;
+++	}
+++}
+++
+++# Action to build hlsl source, a shader compiler should be called here, but for the purpose
+++# of this example, I am just writing an extern function definition into the header file.
+++actions Hlsl
+++{
+++	ECHO extern inline int $(1:BU)Add( int a, int b ) { return a + b; } > $(1)
+++}
+++
+++rule GenerateShaders PARENTS : SOURCES
+++{		
+++	# Find the sources.
+++	SEARCH on $(SOURCES) = $(SEARCH_SOURCE) ;
+++
+++	# Go through each source file.
+++	for source in $(SOURCES:T)
+++	{				
+++		# Work out header name from source name.
+++		local header = $(source:LS=Shaders.h) ;
+++				
+++		# Add header/source to target, so it can be queried later by the apply rule.
+++		on $(PARENTS) HLSL_HEADERS += $(header) ;
+++		
+++		# Setup a dependency (at the file level) between header and source.
+++		Depends $(header) : $(source) ;
+++		
+++		# Action to build header from source.
+++		Hlsl $(header) : $(source) ;
+++	}
+++		
+++	# Perform header scan on our hlsl files as they might have #include's.
+++	HDRRULE on $(SOURCES:T)		= C.HdrRule ;
+++	HDRSCAN on $(SOURCES:T)		= $(C.HDRPATTERN) ;
+++	HDRGRIST on $(SOURCES:T)	= $(grist) ;
+++	
+++	# Generate project for shaders.
+++	Project $(PARENTS) : $(SOURCES) $(SOURCES:LS=shaders.h) ;
+++}
++diff --git a/tests/shader/readme.txt b/tests/shader/readme.txt
++new file mode 100644
++index 0000000..99f7494
++--- /dev/null
+++++ b/tests/shader/readme.txt
++@@ -0,0 +1,15 @@
+++This is an example of how a shader compiler can be hooked up into JamPlus in such a way that it could compile
+++a shader file into a header file, and then have the header file included into the source files.
+++
+++JamPlus will know whether it needs to recompile the shaders and generate new headers based on if there is a
+++change to the the hlsl files, or any files included by the hlsl files. It will also know it needs to compile
+++and generate the headers if the headers are currently missing.
+++
+++For the sake of making a 'complete' sample, the project is setup as three components in the Source directory:
+++
+++App		- builds the application, links against the 'Lib' project, and also relies on 'Shaders'
+++Lib		- builds a static library, relies on 'Shaders'
+++Shaders		- Phony target, has information about building the shaders, these will only get compiled
+++		  when required though (by App/Lib #including a file generated from the shaders).
+++
+++There is also the GenerateWorkSpaceVs2005.bat file provided to generate a VS2005 workspace.
++\ No newline at end of file
 diff --git a/tests/shader/GenerateWorkSpaceVs2005.bat b/tests/shader/GenerateWorkSpaceVs2005.bat
 new file mode 100644
 index 0000000..5cc4c56
