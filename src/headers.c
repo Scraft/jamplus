@@ -53,8 +53,6 @@ static LIST *headers1( const char *file, LIST *hdrscan );
 # include "filesys.h"
 #endif
 
-static const int kHeaderGroup = 2;
-
 /*
  * headers() - scan a target for include files and call HDRRULE
  */
@@ -129,6 +127,7 @@ static LIST *headers1helper(
 	char	buf[ 1024 ];
 	LIST	*hdrdownshift;
 	int	dodownshift = 1;
+	int group = 0;
 
 #ifdef OPT_IMPROVED_PATIENCE_EXT
 	static int count = 0;
@@ -163,16 +162,23 @@ static LIST *headers1helper(
 	while( fgets( buf, sizeof( buf ), f ) )
 	{
 	    for( i = 0; i < rec; i++ )
-		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
+		if( jam_regexec( re[i], buf ) && re[i]->startp[0] )
 	    {
 		/* Copy and terminate extracted string. */
 
 		char buf2[ MAXSYM ];
-		int l = (int)(re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup]);
+		int l = 0;
+
+		// Find last matching group.
+		while ( re[i]->startp[ group + 1 ] )
+		{
+			++group;
+		}
+		l = (int)(re[i]->endp[group] - re[i]->startp[group]);
 # ifdef DOWNSHIFT_PATHS
 		if ( dodownshift )
 		{
-		    const char *target = re[i]->startp[kHeaderGroup];
+		    const char *target = re[i]->startp[group];
 		    char *p = buf2;
 
 		    if ( l > 0 )
@@ -186,7 +192,7 @@ static LIST *headers1helper(
 		else
 # endif
 		{
-		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
+		memcpy( buf2, re[i]->startp[group], l );
 		buf2[ l ] = 0;
 		}
 
@@ -307,14 +313,20 @@ headers1(
 	while( fgets( buf, sizeof( buf ), f ) )
 	{
 	    for( i = 0; i < rec; i++ )
-		if( jam_regexec( re[i], buf ) && re[i]->startp[kHeaderGroup] )
+		if( jam_regexec( re[i], buf ) && re[i]->startp[0] )
 	    {
 		/* Copy and terminate extracted string. */
+		// Find last matching group.
+		int group = 0;
+		while ( re[i]->startp[ group + 1 ] )
+		{
+			++group;
+		}
 
 		char buf2[ MAXSYM ];
-		int l = re[i]->endp[kHeaderGroup] - re[i]->startp[kHeaderGroup];
+		int l = re[i]->endp[group] - re[i]->startp[group];
 # ifdef DOWNSHIFT_PATHS
-		const char *target = re[i]->startp[kHeaderGroup];
+		const char *target = re[i]->startp[group];
 		char *p = buf2;
 
 		do *p++ = tolower( *target++ );
@@ -322,7 +334,7 @@ headers1(
 
 		*p = 0;
 #else
-		memcpy( buf2, re[i]->startp[kHeaderGroup], l );
+		memcpy( buf2, re[i]->startp[group], l );
 		buf2[ l ] = 0;
 # endif
 		result = list_new( result, buf2, 0 );
