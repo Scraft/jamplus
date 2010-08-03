@@ -1,0 +1,14 @@
+PRECOMPILED_HEADER_DEPS_SRCS =
+	main.cpp
+	system.h
+	;
+	
+PRECOMPILED_HEADER_DEPS_PCH_SRCS =
+	pch.cpp
+	pch.h
+	;
+
+C.PrecompiledHeader	precompiled_header_deps : $(PRECOMPILED_HEADER_DEPS_PCH_SRCS) : $(PRECOMPILED_HEADER_DEPS_SRCS) ;
+AutoSourceGroup		precompiled_header_deps : $(PRECOMPILED_HEADER_DEPS_SRCS) $(PRECOMPILED_HEADER_DEPS_PCH_SRCS) ;
+
+C.Application		precompiled_header_deps : $(PRECOMPILED_HEADER_DEPS_SRCS) $(PRECOMPILED_HEADER_DEPS_PCH_SRCS) ;
