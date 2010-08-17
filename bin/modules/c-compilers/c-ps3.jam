@@ -21,10 +21,6 @@
 
 if ! $(TARGETINFO_LOCATE) {
 
-rule C.FDefines { return -D$(<) ; }
-rule C.FIncludes { return -I$(<) ; }
-rule C.FLibraryPaths { return -L$(<) ; }
-
 
 actions updated together piecemeal response C.Archive
 {
@@ -34,7 +30,7 @@ actions updated together piecemeal response C.Archive
 actions response screenoutput C.Link
 {
 	Echo @ C.Link patience...
-	"$(C.LINK)" @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:T) --start-group $(LINKLIBS) --end-group) -o $(<[1]:C)
+	"$(C.LINK)" @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) --start-group $(LINKLIBS:T) --end-group) -o $(<[1]:C)
 }
 
 actions together response C.Ranlib
@@ -82,32 +78,7 @@ rule C._ForceIncludeHelper
 }
 
 
-rule C._C++Exceptions
-{
-	FLAGS_TO_REMOVE.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fno-exceptions ;
-
-	if ! $(TYPE)  ||  $(TYPE) = false
-	{
-		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) -= -fno-exceptions ;
-	}
-	else if $(TYPE) = true
-	{
-		FLAGS_TO_ADD.$(THE_PLATFORM).$(THE_CONFIG) on $(TARGET) += -fexceptions ;
-	}
-}
-
-
-rule C._RuntimeTypeHelper
-{
-	if ! $(TYPE)  ||  $(TYPE) = dynamic
-	{
-	}
-	else if $(TYPE) = static
-	{
-	}
-}
-
-rule C._MultiCppCompile_SetupFlags
+rule C.__MultiCppCompile_SetupFlags
 {
 	if $(_pch[1])  &&  ! $(_nopch) {
 		_flags += -Winvalid-pch ;
@@ -164,36 +135,7 @@ rule C._MultiCppCompile_SetupFlags
 	#}
 }
 
-rule C._SharedLibraryFromObjects_ExportLib
-{
-#			BINDING on $(_tlib) = [ _retrieveOutputName $(TARGET) : SUFLIB ] ;
-	BINDING on $(_tlib) = $(_t) ;
-	MakeLocate $(_tlib) : $(outputPath) ;
-	Depends $(TARGET) : $(_tlib) ;
-	Depends $(_tlib) : $(_t) ;
-	NotFile $(_tlib) ;		# Turn this off for export libraries.
-	_linkTargets += $(_tlib) ;
-
-#			LinkFlags $(TARGET) : -Wl,--out-implib,$(_tlib:T) ;
-}
-
-rule C._SharedLibraryFromObjects_LinkFlags
-{
-	if module in $(OPTIONS) {
-		linkFlags += -shared -fPIC ;
-	} else {
-		on $(TARGET) linkFlags += -shared -fPIC ;
-	}
-}
-
 } # TARGETINFO_LOCATE
-
-C.BUILD_EXTENSIONS = $(SUFOBJ) ;
-C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
-C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
-C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
-C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
-C.AddBuildExtensions PCH : .h : C.PCH : "" .gch ;
 
 VSCONFIGMAP.debug	= Debug ;
 VSCONFIGMAP.debrel	= DebRel ;

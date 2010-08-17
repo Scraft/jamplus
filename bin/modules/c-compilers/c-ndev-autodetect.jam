@@ -28,6 +28,9 @@ rule C.AutoDetect
 
 	COMPILER.$(PLATFORM) = ndev ;
 
+	# Use generic gcc module.
+	UseModule c-compilers/c-gcc ;
+
 	UseModule c-compilers/c-ndev ;
 	if $(PLATFORM) != *  &&  $(CONFIG) != * {
 		UseModule c-compilers/$(PLATFORM)-ndev ;

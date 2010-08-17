@@ -1,6 +1,4 @@
 {
-	COMPILER.$(PLATFORM) = gcc ;
-
 	SUFEXE	?= "" ;
 	SUFLIB	?= .a ;
 	SUFMODULE ?= .so ;
@@ -8,10 +6,14 @@
 	SUFOBJ	?= .o ;
 	SUFSHAREDLIB ?= .so ;
 
-	C.Flags CC	: * : -x c ;
-	C.Flags C++	: * : -x c++ ;
-	C.Flags M	: * : -x objective-c ;
-	C.Flags MM	: * : -x objective-c++ ;
+	# Wii uses -lang instead of -x
+	if $(PLATFORM) != wii
+	{
+		C.Flags CC	: * : -x c ;
+		C.Flags C++	: * : -x c++ ;
+		C.Flags M	: * : -x objective-c ;
+		C.Flags MM	: * : -x objective-c++ ;
+	}
 
 	PCHCCFLAGS = -x c-header ;
 	PCHC++FLAGS = -x c++-header ;
@@ -31,6 +33,8 @@
 			C.RANLIB	?= "" ;
 			SUFEXE		= .exe ;
 	}
+	
+	COMPILER.$(PLATFORM) = gcc ;
 }
 
 if ! $(TARGETINFO_LOCATE) {
@@ -133,7 +137,25 @@ rule C._RuntimeTypeHelper
 rule C._MultiCppCompile_SetupFlags
 {
 	if $(_pch[1])  &&  ! $(_nopch) {
-		_flags += -Winvalid-pch ;
+	
+		local _outputSymbol ;
+		local _pchOutputFilenameModifiers ;
+		local _pchIncludeFilenameModifiers ;
+		
+		if $(PLATFORM) = wii
+		{
+			_outputSymbol = -precompile ;
+			_pchOutputFilenameModifiers = T\\ ;
+			_pchIncludeFilenameModifiers = TC ;
+		}
+		else
+		{
+			_outputSymbol = -o ;
+			_pchOutputFilenameModifiers = T ;
+			_pchIncludeFilenameModifiers = TCS= ;
+			
+			_flags += -Winvalid-pch ;
+		}
 
 		local md5 = [ MD5 $(_flags) ] ;
 		local _pchName = @($(_pch[3]:LBS):G=$(grist)-$(md5)) ;
@@ -151,7 +173,7 @@ rule C._MultiCppCompile_SetupFlags
 			newsrcs += $(_pchName) ;
 
 			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
-			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -o \"$(_pchFilename:T)\" ;
+			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) $(_outputSymbol) \"$(_pchFilename:$(_pchOutputFilenameModifiers))\" ;
 
 			Depends $(_pchFilename) : $(_pchName) ;
 			SEARCH on $(_pchName) = $(_hdrs) ;
@@ -163,7 +185,7 @@ rule C._MultiCppCompile_SetupFlags
 			HDRSEARCH on $(_pchName) = $(_hdrs) ;
 		}
 
-		_flags += -include $(_pchFilename:T:S=:C) ;
+		_flags += -include $(_pchFilename:$(_pchIncludeFilenameModifiers)) ;
 
 		HDREXTRA on $(_src) += $(_pchName:T) ;
 
@@ -183,8 +205,11 @@ rule C._MultiCppCompile_SetupFlags
 		_flags += "-include $(objectForceIncludes:G=)" ;
 	}
 
-	_flags += "-o \"$(_obj:T)\"" ;
-
+	if ! ( $(PLATFORM) in wii ps3 )
+	{
+		_flags += "-o \"$(_obj:T)\"" ;
+	}
+	
 	if $(C_LIBRARY_SHARED_MODULE) {
 		_flags += -fPIC ;
 	}

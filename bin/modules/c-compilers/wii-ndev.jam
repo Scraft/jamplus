@@ -13,6 +13,8 @@ STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\MSL_Common\\Include ;
 STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\PPC_EABI\\Include ;
 
 C.STDHDRS += $(STDHDRS) ; 
+	
+# -------------------------------------------------------------------------------------
 
 C.LinkFlags * : -proc gekko -nodefaults -nostdlib -fp hardware ;
 C.C++Flags * : -fp hardware ;

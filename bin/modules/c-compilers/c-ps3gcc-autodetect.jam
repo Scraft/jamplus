@@ -84,6 +84,9 @@ rule C.AutoDetect
 
 	COMPILER.$(PLATFORM) = ps3 ;
 
+	# Use generic gcc module.
+	UseModule c-compilers/c-gcc ;
+
 	UseModule c-compilers/c-ps3 ;
 	if $(PLATFORM) != *  &&  $(CONFIG) != * {
 		UseModule c-compilers/$(PLATFORM)-gcc ;
