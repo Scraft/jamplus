@@ -1,0 +1,111 @@
+#######################################################################################
+
+rule ApplyShaders PARENT : SHADERS
+{
+	if $(PLATFORM) in xbox360 win32 ps3
+	{
+		local headers ;
+		local header_location ;
+
+		# Using the on keyword makes all settings attached to $(SHADERS) available globally.
+		# As an optimization, only swap the settings in once.
+		on $(SHADERS)
+		{
+			headers = $(HLSL_HEADERS) ;
+			header_location = $(HEADER_LOCATION) ;
+		}
+		
+		# We generate the headers into an out of source location to keep the source tree
+		# pristine.  We need to add that location to the include directories for the
+		# parent.
+		C.IncludeDirectories $(PARENT) : $(header_location) ;
+
+		for header in $(headers)
+		{
+			# Using C.TargetGrist is safer than :G=$(PARENT).  Use it wherever you can.
+			local gristedHeader = [ C.TargetGrist $(PARENT) : $(header) ] ;
+
+			ForceCare $(gristedHeader) ;
+
+			# This is a pseudotarget pointing at the actual header.
+			NotFile $(gristedHeader) ;
+
+			Depends $(gristedHeader) : $(header) ;
+		}
+	}
+}
+
+#######################################################################################
+
+rule GenerateShaders PARENT : SOURCES
+{
+	if $(PLATFORM) in xbox360 win32 ps3
+	{		
+		# Grist the incoming SOURCES.
+		SOURCES = [ C.TargetGrist $(PARENT) : $(SOURCES) ] ;
+
+		# Tell Jam where to find the sources.  Use the current SubDir directory by default.
+		SearchSource $(SOURCES) ; 
+
+		# Hook up the project specific clean for this PARENT.
+		local cleanPARENTS = clean:$(PARENT) ;
+		Always $(cleanPARENTS) ;
+		Depends clean : $(cleanPARENTS) ;
+
+		# Tell Jam these targets are actually pseudotargets, so it doesn't attempt
+		# to resolve them as a disk file.
+		NotFile $(PARENT) $(cleanPARENTS) ;
+
+		# Batch operations in Jam are much faster than single calls.
+		local headers = [ C.TargetGrist $(PARENT) : $(SOURCES:LS=Shaders.h) ] ;
+		Depends $(PARENT) : $(headers) ;
+		
+		# Set up the project specific clean to clear out the generated headers.
+		Clean $(cleanPARENTS) : $(headers) ;
+		
+		# Tell Jam where to put the headers when binding the filename.
+		MakeLocate $(headers) : $(LOCATE_SOURCE) ;
+		
+		# If GenerateShaders gets called for more than one target, this makes
+		# sense.  Otherwise, it is just wasting space.
+		HLSL_SRCS on $(PARENT) += $(SOURCES) ;
+		HLSL_HEADERS on $(PARENT) += $(headers) ;
+		HEADER_LOCATION on $(PARENT) = $(LOCATE_SOURCE) ;
+		
+		# Make the generated headers available in the network cache.
+		UseFileCache $(headers) ;
+		
+		# Ensure there is an IDE project containing these sources.
+		if $(PLATFORM) != * && $(CONFIG) != *
+		{
+			Project		$(PARENT) : $(SOURCES) $(headers) ; 
+			SourceGroup $(PARENT) : "hlsl" : $(SOURCES) ;
+			SourceGroup $(PARENT) : "header\\$(CONFIG)" : $(headers) ;
+		}
+
+		for source in $(SOURCES)
+		{
+			# Using C.TargetGrist is safer than :G=$(PARENT).  Use it wherever you can.
+			local header = [ C.TargetGrist $(PARENT) : $(source:LS=Shaders.h) ] ;
+				
+			# nushadercompiler.exe isn't instance safe.
+			SEMAPHORE on $(header) = _NUSHADERCOMPILER_$(PF) ;
+
+			Depends $(header) : $(source) ;
+			
+			# As well as source and destination files, the current platform affects the output of the CompileHlsl rule...
+			UseCommandLine $(header) : $(PF) ;
+
+			CompileHlsl $(header) : $(source) ;
+		}
+	}
+}
+
+#######################################################################################
+
+actions CompileHlsl
+{
+	ECHO inline int $(1:BU)Add( int a, int b ) { return a + b; } > $(1:\\)
+}	
+
+#######################################################################################

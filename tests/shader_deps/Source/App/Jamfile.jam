@@ -1,0 +1,24 @@
+SubDir TOP App ;
+
+SubInclude TOP Shaders ;
+
+SRCS =
+	main.cpp
+	;
+	
+PROJECT_NAME = JamTest ;
+
+# Apply shaders to JamTest target.
+ApplyShaders $(PROJECT_NAME) : shaders ;
+
+# Lump files together.
+C.Lump $(PROJECT_NAME) : SRCS : $(PROJECT_NAME)_Lump.cpp ;
+	
+# Built up to 10 files per instance of compiler.
+C.BatchCompileGroupSize $(PROJECT_NAME) : 10 ;
+
+# Make JamTest from SRCS.
+C.Application $(PROJECT_NAME) : $(SRCS) ;
+
+# Add shaders to workspace.
+Workspace JamTest : shaders ;

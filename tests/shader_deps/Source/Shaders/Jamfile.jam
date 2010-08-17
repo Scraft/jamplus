@@ -1,0 +1,12 @@
+SubDir TOP Shaders ;
+
+# List of hlsl sources to build.
+HLSL_SRCS =
+	blurs.hlsl
+	copytex.hlsl
+	blursInclude.hlsl
+	shared.hlsl
+;
+
+# Generate shaders target from the hlsl source.
+GenerateShaders shaders : $(HLSL_SRCS) ;
