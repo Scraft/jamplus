@@ -1,18 +1,10 @@
+PS3_GCC_COMPONENTS_FOUND = 0 ;
+
 rule FindPs3GccCompiler
 {
-	PS3_GCC_BIN				= $(SCE_PS3_ROOT)/host-win32/bin ;
-	PS3_GCC_PPU_BIN			= $(SCE_PS3_ROOT)/host-win32/ppu/bin ;
-
-	PS3_GCC_GCC				= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-gcc.exe ] ;
-	PS3_GCC_G++				= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-g++.exe ] ;
-	PS3_GCC_LD				= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ld.exe ] ;
-	PS3_GCC_RANLIB			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ranlib.exe ] ;
-	PS3_GCC_AR_BAT			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ar-launcher.exe ] ;
-	PS3_GCC_AR_EXE			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-ar.exe ] ;
-	PS3_GCC_STRIP			= [ Glob $(PS3_GCC_PPU_BIN)	: ppu-lv2-strip.exe ] ;
-	
-	PS3_GCC_MKSELF			= [ Glob $(PS3_GCC_BIN)		: make_fself.exe ] ;
-	PS3_GCC_MKSELF_NPDRM	= [ Glob $(PS3_GCC_BIN)		: make_fself_npdrm.exe ] ;
+	PS3_GCC_GCC	= [ Glob $(PS3_PPU_BIN_PATH) : ppu-lv2-gcc.exe ] ;
+	PS3_GCC_G++	= [ Glob $(PS3_PPU_BIN_PATH) : ppu-lv2-g++.exe ] ;
+	PS3_GCC_LD	= [ Glob $(PS3_PPU_BIN_PATH) : ppu-lv2-ld.exe ] ;
 	
 	if ! $(PS3_GCC_GCC)
 	{
@@ -32,67 +24,29 @@ rule FindPs3GccCompiler
 		return ;
 	}
 	
-	if ! $(PS3_GCC_RANLIB)
-	{
-		Echo PS3 \: GCC \: Could not find RANLIB optimiser ;
-		return ;
-	}
-	
-	if ! $(PS3_GCC_AR_BAT)
-	{
-		Echo PS3 \: GCC \: Could not find AR archiver launcher ;
-		return ;
-	}
-	
-	if ! $(PS3_GCC_AR_EXE)
-	{
-		Echo PS3 \: GCC \: Could not find AR archiver ;
-		return ;
-	}
-	
-	if ! $(PS3_GCC_STRIP)
-	{
-		Echo PS3 \: GCC \: Could not find stripper ;
-		return ;
-	}
-	
-	if ! $(PS3_GCC_MKSELF)
-	{
-		Echo PS3 \: GCC \: Could not find self maker ;
-		return ;
-	}
-	
-	if ! $(PS3_GCC_MKSELF_NPDRM)
-	{
-		Echo PS3 \: GCC \: Could not find npdrm self maker ;
-		return ;
-	}	
-	
-	CELL_ROOT		= $(SCE_PS3_ROOT) ;
-	COMPILER_ROOT	= $(SCE_PS3_ROOT)/host-win32/ppu/bin ;
+	PS3_GCC_COMPONENTS_FOUND = 1 ;
 }
 
 rule C.AutoDetect 
 {
 	FindPs3GccCompiler ;
 
-	if ! $(COMPILER_ROOT) 
+	if ! ( $(PS3_GCC_COMPONENTS_FOUND) = 1 )
 	{
 		Echo PS3 \: GCC \: Could not find PS3 GCC tool chain ;
 		return ;
 	}
 
-	COMPILER.$(PLATFORM) = ps3 ;
+	COMPILER.$(PLATFORM) = ps3gcc ;
 
 	# Use generic gcc module.
 	UseModule c-compilers/c-gcc ;
 
-	UseModule c-compilers/c-ps3 ;
+	UseModule c-compilers/c-ps3gcc ;
 	if $(PLATFORM) != *  &&  $(CONFIG) != * {
-		UseModule c-compilers/$(PLATFORM)-gcc ;
-		UseModule c-compilers/$(PLATFORM)-gcc-$(CONFIG) ;
+		UseModule c-compilers/ps3-gcc ;
+		UseModule c-compilers/ps3-gcc-$(CONFIG) ;
 	}
 
 	return $(COMPILER.$(PLATFORM)) ;
 }
-

@@ -1,0 +1,40 @@
+PS3_SN_COMPONENTS_FOUND = 0 ;
+
+rule FindPs3SnCompiler
+{	
+	SN_BIN_PATH			= $(SCE_PS3_ROOT)/host-win32/sn/bin ;	
+
+	PS3_SNC				= [ Glob $(SN_BIN_PATH)		: ps3ppusnc.exe ] ;	
+	
+	if ! $(PS3_SNC)
+	{
+		Echo PS3 \: SN \: Could not find SNC compiler ;
+		return ;
+	}
+	
+	PS3_SN_COMPONENTS_FOUND = 1 ;
+}
+
+rule C.AutoDetect 
+{
+	FindPs3SnCompiler ;
+
+	if ! ( $(PS3_SN_COMPONENTS_FOUND) = 1 )
+	{
+		Echo PS3 \: SN \: Could not find PS3 SN tool chain ;
+		return ;
+	}
+
+	COMPILER.$(PLATFORM) = ps3sn ;
+
+	# Use generic gcc module.
+	# UseModule c-compilers/c-gcc ;
+
+	UseModule c-compilers/c-ps3sn ;
+	if $(PLATFORM) != *  &&  $(CONFIG) != * {
+		UseModule c-compilers/ps3-sn ;
+		UseModule c-compilers/ps3-sn-$(CONFIG) ;
+	}
+
+	return $(COMPILER.$(PLATFORM)) ;
+}

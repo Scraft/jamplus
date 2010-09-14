@@ -28,9 +28,48 @@ actions ImageXex1
 	"$(XEDK)/bin/win32/imagexex" /out:"$(1)" /nologo "$(2)"
 }
 
+rule DeployXexHelper
+{
+	local xex ;
+	on $(TARGET) xex = $(LINK_TARGET:S=.xex) ;
+		
+	local deployLocation ;
+	on $(xex) deployLocation = $(DEPLOY_LOCATION) ;
+		
+	if $(deployLocation)
+	{
+		DEPLOY_LOCATION on $(xex) = $(deployLocation) ;
+		DeployXex_ $(xex) ;
+	}
+	
+	##################################################
+	
+	local exe ;
+	on $(TARGET) exe = $(LINK_TARGET:S=.exe) ;
+		
+	if $(deployLocation)
+	{
+		DEPLOY_LOCATION on $(exe) = $(deployLocation) ;
+		DeployXex_ $(exe) ;
+	}
+	
+}
+
+actions DeployXex_
+{
+	"$(XEDK)/bin/win32/xbecopy.exe" $(1:C\\) "$(DEPLOY_LOCATION)$(1:BS)" /nologo
+}
+
 rule C._ApplicationFromObjects_PostBuild
 {
 	ImageXex $(TARGET) ;
+	DeployXexHelper $(TARGET) ;
+}
+
+rule C.DeployXex TARGET : DEPLOY_LOCATION
+{
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	DEPLOY_LOCATION on $(TARGET) = $(DEPLOY_LOCATION) ;
 }
 
 rule C.Xbox360DeployToolSettings TARGET : REMOTE_ROOT : DEPLOYMENT_TYPE : DEPLOYMENT_FILES

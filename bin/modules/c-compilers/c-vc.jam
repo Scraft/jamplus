@@ -48,26 +48,32 @@ rule C._RuntimeTypeHelper
 	if ! $(TYPE)  ||  $(TYPE) = dynamic
 	{
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) -= /MDd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) -= /MDd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) -= /MD ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) -= /MD ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) += /MTd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) += /MTd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) += /MT ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MT ;
 
 		FLAGS_TO_ADD.$(THE_PLATFORM).debug on $(TARGET) += /MDd ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).debrel on $(TARGET) += /MDd ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).release on $(TARGET) += /MD ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MD ;
 	}
 	else if $(TYPE) = static
 	{
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) -= /MTd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) -= /MTd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) -= /MT ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) -= /MT ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) += /MDd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) += /MDd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) += /MD ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MD ;
 
 		FLAGS_TO_ADD.$(THE_PLATFORM).debug on $(TARGET) += /MTd ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).debrel on $(TARGET) += /MTd ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).release on $(TARGET) += /MT ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MT ;
 	}
@@ -161,7 +167,7 @@ rule C._writeManifest TARGET : _t : MANIFEST_TYPE
 	MakeLocate $(tempIntermediateManifest) : $(LOCATE_TARGET) ;
 	Clean clean:$(TARGET) : $(tempIntermediateManifest) ;
 
-	if $(CONFIG) = debug
+	if $(CONFIG) in debug debrel
 	{
 		local tempEmbeddedManifest = @($(_t[1]).embed.manifest:G=$(grist)) ;
 		MakeLocate $(tempEmbeddedManifest) : $(LOCATE_TARGET) ;
@@ -293,7 +299,7 @@ rule C._MultiCppCompile_PchDeps
 
 rule C._MultiCppCompile_PostCompile
 {
-	if $(COMPILER.$(PLATFORM)) in vc6 vs2003 vs2005 vs2008 vs2010 {
+	if $(COMPILER.$(PLATFORM)) in vc6 vs2003 vs2005 vs2008 vs2010 xbox360 {
 		# If Incredibuild is enabled, we do not need the semaphore as Incredibuild does something magic to get around the problem.
 		if $(INCREDIBUILD) != "on" {
 			SEMAPHORE on $(objects) = $(_VCPDB) ;
@@ -341,7 +347,7 @@ rule C._ApplicationFromObjects_LinkFlags
 
 	if $(COMPILER.$(PLATFORM)) != vc6 {
 		if manifest in $(OPTIONS) {
-			if $(CONFIG) = debug {
+			if $(CONFIG) in debug debrel {
 				linkRule = C.DebugLinkWithManifest ;
 			} else {
 				linkRule = C.LinkWithManifest ;
@@ -417,7 +423,7 @@ rule C._SharedLibraryFromObjects_LinkFlags
 
 	if $(COMPILER.$(PLATFORM)) != vc6 {
 		if manifest in $(OPTIONS) {
-			if $(CONFIG) = debug {
+			if $(CONFIG) in debug debrel {
 				linkRule = C.DebugLinkWithManifest ;
 			} else {
 				linkRule = C.LinkWithManifest ;

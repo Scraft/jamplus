@@ -1,0 +1,6 @@
+C.CFlags * : /EHsc /MTd /W3 /Zi : debrel : xbox360 ;
+C.C++Flags * : /EHsc /MTd /W3 /Zi : debrel : xbox360 ;
+C.LibFlags * : : debrel : xbox360 ;
+C.LinkFlags * : /INCREMENTAL /DEBUG : debrel : xbox360 ;
+
+VSCONFIGMAP.debrel = DebRel ;

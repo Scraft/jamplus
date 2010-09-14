@@ -1,0 +1,86 @@
+PS3_SHARED_COMPONENTS_FOUND = 0 ;
+
+rule FindPs3SharedCompiler
+{
+	# -----------------------------------------------------------------------------------
+	# Directories.
+	# -----------------------------------------------------------------------------------
+	
+	# Fix up spaces in main PS3 SDK path.
+	SN_PS3_PATH				= $(SN_PS3_PATH:J=" ") ;
+	SCE_PS3_ROOT			= $(SCE_PS3_ROOT:J=" ") ;
+
+	# General bin directory.
+	PS3_BIN_PATH			= $(SCE_PS3_ROOT)/host-win32/bin ;
+	
+	# PPU bin directory.
+	PS3_PPU_BIN_PATH		= $(SCE_PS3_ROOT)/host-win32/ppu/bin ;
+	
+	# SN common VSI bin directory.
+	SN_COMMON_VSI_BIN		= $(SN_COMMON_PATH:J=" ")/VSI/bin ;
+
+	# -----------------------------------------------------------------------------------
+	# Tools.
+	# -----------------------------------------------------------------------------------
+	
+	PS3_PPU_RANLIB			= [ Glob $(PS3_PPU_BIN_PATH)		: ppu-lv2-ranlib.exe ] ;
+	PS3_PPU_ARCHIVE			= [ Glob $(PS3_PPU_BIN_PATH)		: ppu-lv2-ar.exe ] ;
+	PS3_PPU_STRIP			= [ Glob $(PS3_PPU_BIN_PATH)		: ppu-lv2-strip.exe ] ;
+	
+	PS3_MAKESELF			= [ Glob $(PS3_BIN_PATH)			: make_fself.exe ] ;
+	PS3_MAKESELF_NPDRM		= [ Glob $(PS3_BIN_PATH)			: make_fself_npdrm.exe ] ;
+	
+	SN_GCC2VS				= [ Glob $(SN_COMMON_VSI_BIN)		: gcc2vs.exe ] ;
+	
+	# Need GCC for linking, at least for now.
+	PS3_GCC_GCC				= [ Glob $(PS3_PPU_BIN_PATH)		: ppu-lv2-gcc.exe ] ;
+
+	# -----------------------------------------------------------------------------------
+	# Checks.
+	# -----------------------------------------------------------------------------------
+	
+	if ! $(PS3_PPU_RANLIB)
+	{
+		Echo PS3 \: Could not find RANLIB optimiser 'ppu-lv2-ranlib.exe' in directory '$(PS3_PPU_BIN_PATH)' ;
+		return ;
+	}
+	
+	if ! $(PS3_PPU_ARCHIVE)
+	{
+		Echo PS3 \: Could not find AR archiver 'ppu-lv2-ar.exe' in directory '$(PS3_PPU_BIN_PATH)' ;
+		return ;
+	}
+	
+	if ! $(PS3_PPU_STRIP)
+	{
+		Echo PS3 \: Could not find stripper 'ppu-lv2-strip.exe' in directory '$(PS3_PPU_BIN_PATH)' ;
+		return ;
+	}
+	
+	if ! $(PS3_MAKESELF)
+	{
+		Echo PS3 \: Could not find stripper 'make_fself.exe' in directory '$(PS3_BIN_PATH)' ;
+		return ;
+	}
+	
+	if ! $(PS3_MAKESELF_NPDRM)
+	{
+		Echo PS3 \: Could not find stripper 'make_fself_npdrm.exe' in directory '$(PS3_BIN_PATH)' ;
+		return ;
+	}	
+	
+	PS3_SHARED_COMPONENTS_FOUND = 1 ;
+}
+
+rule C.AutoDetectPs3SharedComponents
+{
+	FindPs3SharedCompiler ;
+
+	if ! ( $(PS3_SHARED_COMPONENTS_FOUND) = 1 )
+	{
+		Echo PS3 \: Could not find shared components ;
+		return 0 ;
+	}
+	
+	return 1 ;
+}

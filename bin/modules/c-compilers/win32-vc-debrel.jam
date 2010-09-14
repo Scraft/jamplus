@@ -1,0 +1,6 @@
+C.CFlags * : /EHsc /MDd /W3 /Zi : debrel : win32 ;
+C.C++Flags * : /EHsc /MDd /W3 /Zi : debrel : win32 ;
+C.LibFlags * : : debrel : win32 ;
+C.LinkFlags * : /INCREMENTAL /DEBUG /MACHINE:X86 : debrel : win32 ;
+
+VSCONFIGMAP.debrel = DebRel ;

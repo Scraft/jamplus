@@ -7,7 +7,7 @@
 	SUFSHAREDLIB ?= .so ;
 
 	# Wii uses -lang instead of -x
-	if $(PLATFORM) != wii
+	if ! ( $(PLATFORM) in wii psp2 )
 	{
 		C.Flags CC	: * : -x c ;
 		C.Flags C++	: * : -x c++ ;
@@ -205,7 +205,7 @@ rule C._MultiCppCompile_SetupFlags
 		_flags += "-include $(objectForceIncludes:G=)" ;
 	}
 
-	if ! ( $(PLATFORM) in wii ps3 )
+	if ! ( $(PF) in wii ps3 )
 	{
 		_flags += "-o \"$(_obj:T)\"" ;
 	}

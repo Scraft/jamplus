@@ -1,0 +1,194 @@
+{
+	SUFEXE	?= ".elf" ;
+	SUFLIB	?= .a ;
+	SUFMODULE ?= .so ;
+	SUFOBJ	?= .o ;
+	SUFSHAREDLIB ?= .so ;
+
+	C.Flags CC	: * : -Tc ;
+	C.Flags C++	: * : -Tp ;
+#	C.Flags M	: * : -x objective-c ;
+#	C.Flags MM	: * : -x objective-c++ ;
+
+#	PCHCCFLAGS = -x c-header ;
+#	PCHC++FLAGS = -x c++-header ;
+#	PCHMFLAGS = -x objective-c-header ;
+#	PCHMMFLAGS = -x objective-c++-header ;
+
+	NOARSCAN = true ;
+#	NOARUPDATE = true ;
+}
+
+if ! $(TARGETINFO_LOCATE) {
+
+rule C.FDefines { return -D$(<) ; }
+rule C.FIncludes 
+{ 
+	if "$(<)" = "."
+	{
+		return -I. ; 
+	}
+	else
+	{
+		return -I\"$(<)\" ; 
+	}
+}
+rule C.FLibraryPaths { return -L\"$(<)\" ; }
+
+# ----------------------------------------------------------
+# Copied from c-gcc as SN Jam stuff isn't using this module (yet?).
+
+rule C._LinkPrebuiltLibraries
+{
+	local lib ;
+	for lib in $(gristedLibraries) {
+		if ! $(lib:D) {
+   			BINDING on $(lib) = lib$(lib:B) ;
+			EXPAND_TEXT on $(lib) = -l$(lib:G=) ;
+			NoCare $(lib) ;
+   		}
+	}
+}
+
+rule C._RuntimeTypeHelper
+{
+	if ! $(TYPE)  ||  $(TYPE) = dynamic
+	{
+	}
+	else if $(TYPE) = static
+	{
+	}
+}
+
+# ----------------------------------------------------------
+
+actions updated together piecemeal response C.Archive
+{
+	"$(C.AR)" @@(-ru $(LIBFLAGS) $(<:C) $(>:C))
+}
+
+actions response screenoutput C.Link
+{
+	Echo @ C.Link patience...
+	"$(C.LINK)" @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) --start-group $(LINKLIBS:T) --end-group) -o $(<[1]:C)
+}
+
+actions together response C.Ranlib
+{
+	"$(C.RANLIB)" $(<:C)
+}
+
+#
+# NOARUPDATE - can't update an archive
+#
+
+if $(NOARUPDATE)
+{
+	actions response C.Archive
+	{
+		"$(C.AR)" -ru $(LIBFLAGS) $(<:C) @@($(>:C))
+	}
+}
+
+actions updated response screenoutput C.CC
+{
+	"$(C.CC)" -c $(MFLAGS) $(>:C)
+}
+
+actions updated response screenoutput C.C++
+{	
+	PUSHD $(<[0]:D\\C)
+	$(C.C++:\\C) $(MFLAGS) -c $(>:C)
+	SET RET=%ERRORLEVEL%
+	POPD
+	EXIT /B %RET%
+}
+
+actions updated response C.PCH
+{		
+	PUSHD $(1:D\\C)\..
+	"$(C.C++)" $(MFLAGS) -c $(2:S=.cpp)
+	SET RET=%ERRORLEVEL%
+	POPD
+	EXIT /B %RET%
+}
+
+
+rule C._ForceIncludeHelper
+{
+	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
+}
+
+
+rule C._MultiCppCompile_SetupFlags
+{
+	if $(postREFERENCEDIRECTORIES[1]) {
+		_flags += $(postREFERENCEDIRECTORIES) ;
+	}
+
+	local forceIncludeHeader ;
+	if $(_pch[2]) {
+		forceIncludeHeader = $(_pch[2]:G=$(grist)|force) ;
+		BINDING on $(forceIncludeHeader) = $(_pch[3]) ;
+		SEARCH on $(forceIncludeHeader) = $(_hdrs) ;
+		objectForceIncludes = $(forceIncludeHeader) $(objectForceIncludes) ;
+	}
+
+	if $(_pch[4]) {
+		# add extra flags to enable pch creation
+		local _pchFilename = $(_pch[3]:LBS).gch ;
+		local _pchDiskFilename = [ FDirName $(LOCATE_TARGET) $(_pchFilename:BS) ] ;
+		_flags += --create_pch=\"$(_pchDiskFilename:\\)\" -Xpch_override=1 ;
+		# mark that it will be created by compilation through srcref
+		_pchFilename = $(_pchFilename:G=$(grist)) ;
+		BINDING on $(_pchFilename) = $(_pchFilename:BS) ;
+		MakeLocate $(_pchFilename) : $(LOCATE_TARGET) ;
+		Depends $(_pchFilename) : $(_src) ;
+		Clean clean:$(TARGET) : $(_pchFilename) ;
+
+	# if the source should use pch
+	} else if $(_pch[2]) && ! $(_nopch) {
+		# add extra flags to enable pch loading
+		local _pchFilename = $(_pch[3]:LBS).gch ;
+		local _pchDiskFilename = [ FDirName $(LOCATE_TARGET) $(_pchFilename:BS) ] ;
+		_flags += --use_pch=\"$(_pchDiskFilename:\\)\" -Xpch_override=1 ;
+		# mark that compilation will depend on it
+		_pchFilename = $(_pchFilename:G=$(grist)) ;
+		Includes $(_src) : $(_pchFilename) ;
+	}
+
+	if $(objectForceIncludes[1]) {
+		SEARCH on $(objectForceIncludes) = $(_hdrs) ;
+		_flags += "-include \"$(objectForceIncludes:G=)\"" ;
+	}
+
+	# bind flags, defines and includes to the target
+	_flags += $(_postmflags) ;
+}
+
+rule C._MultiCppCompile_PchDeps
+{
+	if $(_pch1[4]) {
+		local _pchFilename = $(_pch1[3]:LBS).gch ;
+		_pchFilename = $(_pchFilename:G=$(grist)) ;
+		Depends $(objects) : $(_pchFilename) ;
+		# add that pch as output
+		objects += $(_pchFilename) ;
+	}
+}
+
+} # TARGETINFO_LOCATE
+
+C.BUILD_EXTENSIONS = $(SUFOBJ) ;
+C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
+C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
+C.AddBuildExtensions PCH : .h .pch : C.PCH : "" .gch ;
+
+VSCONFIGMAP.debug	= Debug ;
+VSCONFIGMAP.debrel	= DebRel ;
+VSCONFIGMAP.release	= Release ;
+VSCONFIGMAP.final	= Final ;
+
+VSPLATFORMMAP.ps3sn	= "PS3-SN" ;

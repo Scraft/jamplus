@@ -2,8 +2,7 @@ C.AR		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
 C.CC		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
 C.C++		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
 C.LINK		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
-C.RANLIB	?= "C:\\Work\\powerpc-eabi-ranlib.exe" ;
-
+C.RANLIB	?= "$(TT)\\nu2api\\bintool\\powerpc-eabi-ranlib.exe" ;
 
 STDHDRS	+= $(NDEV_ROOT)\\RVL_SDK\\include ;
 STDHDRS	+= $(NDEV_ROOT)\\RVL_SDK\\include\\revolution ;

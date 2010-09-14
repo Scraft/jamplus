@@ -1,17 +1,15 @@
 {
-	SUFEXE	?= .elf ;
-	SUFLIB	?= .a ;
-	SUFMODULE ?= .dll ;
-	SUFOBJ	?= .o ;
-	SUFRES	?= .res ;
-	SUFSHAREDLIB ?= .dll ;
+	SUFEXE			= .elf ;
+	SUFLIB			= .a ;
+	SUFMODULE		= .dll ;
+	SUFOBJ			= .o ;
+	SUFRES			= .res ;
+	SUFSHAREDLIB	= .dll ;
 
 	C.Flags CC	: * : -lang c ;
 	C.Flags C++	: * : -lang c++ ;
 	C.Flags M	: * : -lang objc ;
 	C.Flags MM	: * : -lang objc ;
-
-#	C.Defines * : MINGW ;
 
 	PCHCCFLAGS = -lang c ;
 	PCHC++FLAGS = -lang c++ ;

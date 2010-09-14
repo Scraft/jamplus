@@ -21,10 +21,14 @@
 
 if ! $(TARGETINFO_LOCATE) {
 
+rule C.FDefines { return -D$(<) ; }
+rule C.FIncludes { return -I\"$(<)\" ; }
+rule C.FLibraryPaths { return -L\"$(<)\" ; }
+
 
 actions updated together piecemeal response C.Archive
 {
-	"$(C.ARLAUNCH)" $(<:C) "$(C.AR)" @@(-ru $(LIBFLAGS) $(<:C) $(>:C))
+	"$(C.AR)" @@(-ru $(LIBFLAGS) $(<:C) $(>:C))
 }
 
 actions response screenoutput C.Link
@@ -137,9 +141,9 @@ rule C.__MultiCppCompile_SetupFlags
 
 } # TARGETINFO_LOCATE
 
-VSCONFIGMAP.debug	= Debug ;
-VSCONFIGMAP.debrel	= DebRel ;
-VSCONFIGMAP.release	= Release ;
-VSCONFIGMAP.final	= Final ;
+VSCONFIGMAP.debug		= Debug ;
+VSCONFIGMAP.debrel		= DebRel ;
+VSCONFIGMAP.release		= Release ;
+VSCONFIGMAP.final		= Final ;
 
-VSPLATFORMMAP.ps3	= "Ps3-Sony-Gcc" ;
+VSPLATFORMMAP.ps3gcc	= "PS3-GCC" ;
