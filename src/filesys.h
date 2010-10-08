@@ -5,7 +5,7 @@
  */
 
 /*
- * filesys.h - OS specific file routines 
+ * filesys.h - OS specific file routines
  *
  * 11/04/02 (seiwald) - const-ing for string literals
  */
@@ -47,5 +47,9 @@ void getprocesspath(char* buffer, size_t bufferLen);
 #endif
 
 #ifdef OPT_PRINT_TOTAL_TIME_EXT
+#if _MSC_VER  &&  _MSC_VER < 1300
+unsigned __int64 getmilliseconds();
+#else
 unsigned long long getmilliseconds();
+#endif
 #endif
