@@ -106,6 +106,29 @@ var_defines( const char **e )
 			    split = SPLITPATH;
 		}
 
+		/* SCRAFT - HACK to allow JAMFILE_ROOT/JAMFILE/TARGETINFO_LOCATE to come through as path's. */
+		{
+			const char * const stuffToLookFor[] = {
+				"JAMFILE_ROOT",
+				"JAMFILE",
+				"TARGETINFO_LOCATE"
+			};
+			int i;
+			for ( i = 0; i < sizeof( stuffToLookFor ) / sizeof( stuffToLookFor[ 0 ] ); ++i )
+			{
+				int stringLength = strlen( stuffToLookFor[ i ] );
+				if ( val - stringLength >= *e )
+				{
+					if ( !strncmp( val - stringLength, stuffToLookFor[ i ], stringLength ) )
+					{
+						// Set split to ? as you can't get that in filenames.
+						split = '?';
+						break;
+					}
+				}
+			}
+		}
+
 		/* Do the split */
 
 		for( pp = val + 1; p = strchr( pp, split ); pp = p + 1 )
