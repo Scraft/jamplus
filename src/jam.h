@@ -69,7 +69,7 @@
 /* Do any of these work? */
 # if defined( VAX ) || defined( __VAX ) || defined( vax )
 # define OSPLAT "OSPLAT=VAX"
-# endif 
+# endif
 
 # endif
 
@@ -397,9 +397,9 @@
 # include <malloc.h>
 # endif
 
-# endif 
+# endif
 
-/* 
+/*
  * OSPLAT definitions - suppressed when it's a one-of-a-kind
  */
 
@@ -431,9 +431,9 @@
      !defined( OS_AS400 )
 # define OSPLAT "OSPLAT=X86"
 # endif
-# endif 
+# endif
 
-# endif 
+# endif
 
 # ifdef __sparc__
 # if !defined( OS_SUNOS )
@@ -610,5 +610,9 @@ void* track_realloc(void *ptr, size_t size);
 #ifdef OPT_BUILTIN_MD5CACHE_EXT
 #define MD5_SUMSIZE  16
 typedef unsigned char MD5SUM[MD5_SUMSIZE];
+#endif
+
+#if _MSC_VER  &&  _MSC_VER < 1300
+typedef int intptr_t;
 #endif
 
