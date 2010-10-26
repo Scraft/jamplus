@@ -9,8 +9,6 @@ SUFLINKLIBS = $(SUFLIB) $(SUFMODULE) ;
 
 actions C.Link
 {
-	MACOSX_DEPLOYMENT_TARGET=10.5
-	export MACOSX_DEPLOYMENT_TARGET
 	"$(C.LINK)" $(LINKFLAGS) -o $(<[1]:C) $(>:C) $(NEEDLIBS:T) $(LINKLIBS:T)
 }
 
@@ -42,10 +40,10 @@ if $(DONTUSEMERIGHTNOW)
 }
     
 
-rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION {
-	if ! ( $(PLATFORM) in macosx32 macosx64 ) { return ; }
+rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : MACOSX_VERSION_MIN {
+	if ! ( $(PLATFORM) in macosx32 macosx64 macosxppc ) { return ; }
 
-	if $(SDK_PLATFORM) in macosx32 macosx64 {
+	if $(SDK_PLATFORM) in macosx32 macosx64 macosxppc {
 		SDK_PLATFORM = macosx ;
 	}
 
@@ -53,6 +51,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION {
 	local developerRoot ;
 	local isysroot ;
 	local flags ;
+	local defaultversionmin ;
 	switch $(SDK_PLATFORM) {
 		case macosx :
 			developerRoot = /Developer/SDKs ;
@@ -63,7 +62,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION {
 					C.C++	= g++-4.0 ;
 					C.LINK	= g++-4.0 ;
 					isysroot = $(developerRoot)/MacOSX10.4u.sdk ;
-					flags += -mmacosx-version-min=10.4 ;
+					defaultversionmin = 10.4 ;
 					XCODE_SDKROOT = macosx10.4 ;
 
 				case 10.4u :
@@ -71,7 +70,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION {
 					C.C++	= g++-4.0 ;
 					C.LINK	= g++-4.0 ;
 					isysroot = $(developerRoot)/MacOSX10.4u.sdk ;
-					flags += -mmacosx-version-min=10.4 ;
+					defaultversionmin = 10.4 ;
 					XCODE_SDKROOT = macosx10.4 ;
 
 				case 10.5 :
@@ -79,7 +78,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION {
 					C.C++	= g++ ;
 					C.LINK	= g++ ;
 					isysroot = $(developerRoot)/MacOSX10.5.sdk ;
-					flags += -mmacosx-version-min=10.5 ;
+					defaultversionmin = 10.5 ;
 					XCODE_SDKROOT = macosx10.5 ;
 
 				case 10.6 :
@@ -87,19 +86,27 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION {
 					C.C++	= g++ ;
 					C.LINK	= g++ ;
 					isysroot = $(developerRoot)/MacOSX10.6.sdk ;
-					flags += -mmacosx-version-min=10.6 ;
+					defaultversionmin = 10.6 ;
 					XCODE_SDKROOT = macosx10.6 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
+			MACOSX_VERSION_MIN ?= $(defaultversionmin) ;
+			flags += -mmacosx-version-min=$(MACOSX_VERSION_MIN) ;
 			developerRoot = $(isysroot) ;
 	}
 
-	C.Flags CC	: * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
-	C.Flags C++	: * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
-	C.Flags M	: * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
-	C.Flags MM	: * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
-	C.LinkFlags * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+	C.Flags CC	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+	C.Flags C++	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+	C.Flags M	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+	C.Flags MM	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+	C.LinkFlags $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+
+	if $(TARGETINFO_LOCATE) {
+		Contents += "Projects[ [[$(TARGET)]] ].XCODE_SDKROOT[ [[$(PLATFORM)]] ][ [[$(CONFIG)]] ] = [[$(XCODE_SDKROOT)]]
+
+" ;
+	}
 }
 
 
@@ -208,7 +215,16 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 	}
 }
 
+
+rule C.FrameworkDirectories TARGET : FRAMEWORKDIRS : THE_CONFIG : THE_PLATFORM
+{
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	C.C++Flags $(TARGET)  : "-F$(FRAMEWORKDIRS)" : $(THE_CONFIG) : $(THE_PLATFORM) ;
+	C.LinkFlags $(TARGET) : "-F$(FRAMEWORKDIRS)" : $(THE_CONFIG) : $(THE_PLATFORM) ;
+}
+
 rule C.LinkFrameworks TARGET : FRAMEWORKS : THE_CONFIG : THE_PLATFORM {
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
 	C.LinkFlags $(TARGET) : "-framework $(FRAMEWORKS)" : $(THE_CONFIG) : $(THE_PLATFORM) ;
 }
 
