@@ -1,0 +1,9 @@
+IncludeModule c-compilers/c-ps3-shared-autodetect ;
+if [ C.AutoDetectPs3SharedComponents ]
+{
+	IncludeModule c-compilers/c-ps3gcc-autodetect ;
+	if [ C.AutoDetect ] 
+	{
+		return ;
+	}
+}
