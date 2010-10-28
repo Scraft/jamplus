@@ -1,0 +1,125 @@
+STDHDRS	+= $(SCE_PS3_ROOT)/target/ppu/include ;
+STDHDRS	+= $(SCE_PS3_ROOT)/target/ppu/include/cell ;
+
+C.STDHDRS += $(STDHDRS) ; 
+
+C.Defines * : 
+	__GCC__
+	__CELLOS_LV2__
+	;	
+	
+# -------------------------------------------------------------------------------------
+
+rule C._ApplicationTargetInfo
+{
+	DEBUGGEROUTPUTNAME.$(PLATFORM).$(CONFIG) on $(TARGET) = $(_t:S=.self:R=$(outputPath):G=) ;
+}	
+	
+# -------------------------------------------------------------------------------------
+
+rule Strip TARGET : STRIPPED : UNSTRIPPED
+{
+	MakeLocate $(STRIPPED) : $(LOCATE_TARGET) ;
+	Depends $(TARGET) : $(STRIPPED) : $(UNSTRIPPED) ;
+	Clean clean:$(TARGET) : $(STRIPPED) ;
+	PS3.Strip $(STRIPPED) : $(UNSTRIPPED) ;
+}
+
+actions PS3.Strip
+{
+	$(PS3_PPU_STRIP) -s -o $(1) $(2)
+}
+
+# -------------------------------------------------------------------------------------
+
+rule MakeSelf TARGET : SELF : ELF
+{
+	MakeLocate $(SELF) : $(LOCATE_TARGET) ;
+	Depends $(TARGET) : $(SELF) : $(ELF) ;
+	Clean clean:$(TARGET) : $(SELF) ;
+	PS3.Self $(SELF) : $(ELF) ;
+}
+
+actions PS3.Self
+{
+	$(PS3_MAKESELF) $(2) $(1)
+}
+
+# -------------------------------------------------------------------------------------
+
+rule MakeSelfNpdrm TARGET : SELF : ELF
+{
+	MakeLocate $(SELF) : $(LOCATE_TARGET) ;
+	Depends $(TARGET) : $(SELF) : $(ELF) ;
+	Clean clean:$(TARGET) : $(SELF) ;
+	PS3.SelfNpdrm $(SELF) : $(ELF) ;
+}
+
+actions PS3.SelfNpdrm
+{
+	$(PS3_MAKESELF_NPDRM) $(2) $(1)
+}
+
+# -------------------------------------------------------------------------------------
+
+rule MakeEboot TARGET : BIN : STRIPPED_SELF
+{
+	MakeLocate $(BIN) : $(LOCATE_TARGET) ;
+	Depends $(TARGET) : $(BIN) : $(STRIPPED_SELF) ;
+	Clean clean:$(TARGET) : $(BIN) ;
+	PS3.Eboot $(BIN) : $(STRIPPED_SELF) ;
+}
+
+actions PS3.Eboot
+{
+	COPY $(2:\\T) $(1:\\T) > NUL
+}
+
+# -------------------------------------------------------------------------------------
+
+rule DisplaySNBin TARGET : BIN
+{
+	PS3.SNBin $(BIN) ;
+}
+
+actions PS3.SNBin
+{
+	$(TT)/nu2api/bintool/snbin.exe -dsi $(1:\\T)
+}
+
+# -------------------------------------------------------------------------------------
+
+rule C._ApplicationFromObjects_PostBuild
+{	
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	local _t ;
+	on $(TARGET) _t = $(LINK_TARGET) ;
+	
+	# Our various output files.
+	local elf				= $(_t) ;
+	local self				= $(_t:S=.self) ;
+	local strippedElf		= $(_t:S=.stripped.elf) ;
+	local strippedSelf		= $(_t:S=.stripped.self) ;
+	local strippedNpdrmSelf	= $(_t:S=.stripped.npdrm.self) ;
+	local ebootBin			= $(_t:B=EBOOT:S=.$(CONFIG).BIN) ;
+	
+	# Make self from elf
+	MakeSelf $(TARGET) : $(self) : $(elf) ;
+	
+	# Strip elf to make .stripped.elf
+	Strip $(TARGET) : $(strippedElf) : $(elf) ;
+
+	# Make stripped self from stripped elf
+	MakeSelf $(TARGET) : $(strippedSelf) : $(strippedElf) ;
+
+	# Make stripped npdrm self from stripped elf
+	MakeSelfNpdrm $(TARGET) : $(strippedNpdrmSelf) : $(strippedElf) ;
+	
+	# Make EBOOT.BIN from stripped self
+	MakeEboot $(TARGET) : $(ebootBin) : $(strippedSelf) ;
+	
+	# Display section size information.
+	DisplaySNBin $(TARGET) : $(ebootBin) ;
+}
+
+# -------------------------------------------------------------------------------------
