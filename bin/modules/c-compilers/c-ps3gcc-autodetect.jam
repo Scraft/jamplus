@@ -45,7 +45,6 @@ rule C.AutoDetect
 	UseModule c-compilers/c-ps3gcc ;
 	if $(PLATFORM) != *  &&  $(CONFIG) != * {
 		UseModule c-compilers/ps3-gcc ;
-		UseModule c-compilers/ps3-gcc-$(CONFIG) ;
 	}
 
 	return $(COMPILER.$(PLATFORM)) ;
