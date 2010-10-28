@@ -1,149 +1,117 @@
+# -----------------------------------------------------------------
+# Setup what extensions/features this platform has.
+# -----------------------------------------------------------------
 {
-	SUFEXE	?= ".elf" ;
-	SUFLIB	?= .a ;
-	SUFMODULE ?= .so ;
-	SUFOBJ	?= .o ;
-	SUFSHAREDLIB ?= .so ;
+	SUFEXE			= .elf ;
+	SUFLIB			= .a ;
+	SUFMODULE		= .so ;
+	SUFOBJ			= .o ;
+	SUFSHAREDLIB	= .so ;
 
 	C.Flags CC	: * : -x c ;
 	C.Flags C++	: * : -x c++ ;
 	C.Flags M	: * : -x objective-c ;
 	C.Flags MM	: * : -x objective-c++ ;
 
-	PCHCCFLAGS = -x c-header ;
-	PCHC++FLAGS = -x c++-header ;
-	PCHMFLAGS = -x objective-c-header ;
-	PCHMMFLAGS = -x objective-c++-header ;
+	PCHCCFLAGS		= -x c-header ;
+	PCHC++FLAGS		= -x c++-header ;
+	PCHMFLAGS		= -x objective-c-header ;
+	PCHMMFLAGS		= -x objective-c++-header ;
 
-	NOARSCAN = true ;
-#	NOARUPDATE = true ;
+	NOARSCAN		= true ;
+	NOARUPDATE		= true ;
 }
 
 if ! $(TARGETINFO_LOCATE) {
 
-rule C.FDefines { return -D$(<) ; }
-rule C.FIncludes { return -I\"$(<)\" ; }
-rule C.FLibraryPaths { return -L\"$(<)\" ; }
+# -----------------------------------------------------------------
+# Rules for defining, including and setting up lib directories.
+# -----------------------------------------------------------------
 
-
-actions updated together piecemeal response C.Archive
-{
-	"$(C.AR)" @@(-ru $(LIBFLAGS) $(<:C) $(>:C))
+rule C.FDefines
+{ 
+	return -D$(<) ; 
+}
+rule C.FIncludes 
+{ 
+	return -I\"$(<)\" ; 
+}
+rule C.FLibraryPaths 
+{ 
+	return -L\"$(<)\" ; 
 }
 
+# -----------------------------------------------------------------
+# Rules performing each stage of the build.
+# -----------------------------------------------------------------
+
+# Create an application (.elf) from a bunch of objects/libraries.
 actions response screenoutput C.Link
 {
 	Echo @ C.Link patience...
-	"$(C.LINK)" @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) --start-group $(LINKLIBS:T) --end-group) -o $(<[1]:C)
+	$(C.LINK:\\C) @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) --start-group $(LINKLIBS:T) --end-group -Wl,-Map=$(<[1]:CS=.map) -o $(<[1]:C))
 }
 
+# Create archive (.a) from a bunch of objects.	
+actions response C.Archive
+{
+	IF EXIST $(<:C\\). ( DEL $(<:C\\) )
+	$(C.AR:\\C) @@(-ruc $(LIBFLAGS) $(<:C) $(>:C))
+}
+
+# Optimize (index) a library (.a).
 actions together response C.Ranlib
 {
-	"$(C.RANLIB)" $(<:C)
+	$(C.RANLIB:\\C) @@($(<:C))
 }
 
-#
-# NOARUPDATE - can't update an archive
-#
-
-if $(NOARUPDATE)
-{
-	actions response C.Archive
-	{
-		"$(C.AR)" -ru $(LIBFLAGS) $(<:C) @@($(>:C))
-	}
-}
-
+# Compile C files (.c) into object files (.o).
 actions updated response C.CC
 {
-	"$(C.CC)" -c $(MFLAGS) $(>:C)
+	$(C.CC:\\C) @@(-c $(MFLAGS) $(>:C))
 }
 
+# Compile C++ files (.cpp) into object files (.o).
 actions updated response C.C++
 {
-	REM ECHO $(>:C) - $(MFLAGS) ;
 	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
 	pushd $(<[0]:D\\C)
-	$(C.C++:\\C) -c $(MFLAGS) $(>:C)
+	$(C.C++:\\C) @@(-c $(MFLAGS) $(>:C))
 	SET RET=%ERRORLEVEL%
 	popd
 	EXIT /B %RET%
 }
 
+# Compile PCH header files (.h) into precompiled header files (.h.pch).
 actions updated response C.PCH
 {
-	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+	$(C.C++:\\C) @@(-c $(MFLAGS) $(>:C))
 }
 
+# -----------------------------------------------------------------
 
+# Rule to force include a given file when compiling.
 rule C._ForceIncludeHelper
 {
 	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
 }
 
-
-rule C.__MultiCppCompile_SetupFlags
-{
-	if $(_pch[1])  &&  ! $(_nopch) {
-		_flags += -Winvalid-pch ;
-
-		local md5 = [ MD5 $(_flags) ] ;
-		local _pchName = @($(_pch[3]:LDBS):G=$(grist)-$(md5)) ;
-		local _pchFilename = $(_pchName).gch ;
-
-		if ! $(built-$(_pchName)) {
-			built-$(_pchName) = 1 ;
-
-			local pchext = $(_pchName:S) ;
-			local pchBUILD_EXT = C.BUILD$(pchext) ;
-
-			MakeLocate $(_pchFilename) : $(LOCATE_TARGET)/$(_pchName:S=:G=)-$(md5) ;
-
-			newsrcs += $(_pchName) ;
-
-			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
-			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -o \"$(_pchFilename:T)\" ;
-
-			#Echo Adding depending of $(_pchFilename) \: $(_pchName) ;
-			Depends $(_pchFilename) : $(_pchName) ;
-			SEARCH on $(_pchName) = $(_hdrs) ;
-		}
-
-		_flags += -include $(_pchFilename:T:S=:C) ;
-
-		# if the source should use pch
-		if $(_pch[2]) {
-			# mark that compilation will depend on it
-			# Echo Adding depending 2 of $(_src) \: $(_pchFilename) ;
-			Includes $(_src) : $(_pchFilename) ;
-		}
-
-		if $(_pch[3]) {
-			# Echo Adding depending 3 of $(_obj) \: $(_pchFilename) ;
-			Depends $(_obj) : $(_pchFilename) ;
-		}
-	}
-
-	Includes $(_src) : $(objectForceIncludes) ;
-	SEARCH on $(objectForceIncludes) = $(_hdrs) ;
-	_flags += "-include $(objectForceIncludes:G=)" ;
-
-	# If multiple files are sent to compiler at once, this option allows compiler to perform optimisations across modules.	
-	#_flags += "-combine" ;
-	
-	# This option stops multiple files being sent to compiler at once, seems to speed up compile though? Maybe because less optimisations take place?
-	_flags += "-o \"$(_obj:T)\"" ;
-
-	#if $(C_LIBRARY_SHARED_MODULE) {
-	#	_flags += -fPIC ;
-	#}
-}
+# -----------------------------------------------------------------
 
 } # TARGETINFO_LOCATE
 
-VSCONFIGMAP.debug		= Debug ;
-VSCONFIGMAP.debrel		= DebRel ;
-VSCONFIGMAP.release		= Release ;
-VSCONFIGMAP.final		= Final ;
+# -----------------------------------------------------------------
 
+# Map Jam build configurations to VS configurations.
+VSCONFIGMAP.debug		= Debug ;
+VSCONFIGMAP.optibug		= Optibug ;
+VSCONFIGMAP.artist		= Artist ;
+VSCONFIGMAP.qa			= QA ;
+VSCONFIGMAP.master		= Master ;
+
+# -----------------------------------------------------------------
+
+# Map build platform to VS platform.
 VSPLATFORMMAP.ps3gcc	= "PS3-GCC" ;
+
+# -----------------------------------------------------------------
