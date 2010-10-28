@@ -1,5 +1,18 @@
 rule C.AutoDetect
 {
+	# Hack to handle the fact we pass '-compiler=vs200X' in when generator a workspace, to force the Win32 compiler...
+	if $(PLATFORM) = xbox360
+	{
+		if $(COMPILER) in vs2005 vs2008 vs2010
+		{
+			if $(COMPILER.$(PLATFORM)) in vs2005 vs2008 vs2010
+			{
+				COMPILER.$(PLATFORM) = xbox360 ;
+				COMPILER = xbox360 ;
+			}
+		}
+	}
+	
 	if $(COMPILER.$(PLATFORM))  &&  $(COMPILER.$(PLATFORM)) != xbox360 {
 		return ;
 	}
