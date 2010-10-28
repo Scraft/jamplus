@@ -1,7 +1,34 @@
+
+WII_OUTPUT_PARSER_KEY = HKEY_CURRENT_USER Software TTGames WiiOutputParser Path ;
+WII_OUTPUT_PARSER_VALUE = [ W32_GETREG $(WII_OUTPUT_PARSER_KEY) ] ;
+
+if $(WII_OUTPUT_PARSER_VALUE)
+{
+	WII_OUTPUT_PARSER = $(WII_OUTPUT_PARSER_VALUE)/WiiOutputParser.exe ;
+	
+	C.CC		?= "$(WII_OUTPUT_PARSER)" "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+	C.C++		?= "$(WII_OUTPUT_PARSER)" "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+	C.LINK		?= "$(WII_OUTPUT_PARSER)" "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
+	
+	C.C++Flags  * : -nowraplines -msgstyle parseable ;
+	C.LinkFlags * : -nowraplines -msgstyle parseable ;
+	C.CFlags    * : -nowraplines -msgstyle parseable ;
+	
+}
+else
+{
+	C.CC		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+	C.C++		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
+	C.LINK		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
+	
+	C.C++Flags  * : -nowraplines -msgstyle std ;
+	C.LinkFlags * : -nowraplines -msgstyle std ;
+	C.CFlags    * : -nowraplines -msgstyle std ;
+	
+}
+
+
 C.AR		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
-C.CC		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
-C.C++		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
-C.LINK		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
 C.RANLIB	?= "$(TT)\\nu2api\\bintool\\powerpc-eabi-ranlib.exe" ;
 
 STDHDRS	+= $(NDEV_ROOT)\\RVL_SDK\\include ;
@@ -15,8 +42,33 @@ C.STDHDRS += $(STDHDRS) ;
 	
 # -------------------------------------------------------------------------------------
 
-C.LinkFlags * : -proc gekko -nodefaults -nostdlib -fp hardware ;
-C.C++Flags * : -fp hardware ;
+rule DisplaySNBinWii TARGET : BIN
+{
+	Wii.SNBin $(BIN) ;
+}
+
+actions Wii.SNBin
+{
+	$(TT)/nu2api/bintool/snbin.exe -dsi $(1:\\T)
+}
+
+# -------------------------------------------------------------------------------------
+
+rule C._ApplicationFromObjects_PostBuild
+{
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	local _t ;
+	on $(TARGET) _t = $(LINK_TARGET) ;
+	
+	# Display section size information.
+	DisplaySNBinWii $(TARGET) : $(_t) ;
+}
+
+# -------------------------------------------------------------------------------------
+
+C.LinkFlags       * : -proc gekko -nodefaults -nostdlib -fp hardware ;
+C.CFlags          * : -fp hardware ;
+C.C++Flags        * : -fp hardware ;
 C.LinkDirectories * : $(NDEV_ROOT:\\)\\RVL_SDK\\RVL\\lib ;
 
 VSPLATFORMMAP.wii = "Wii" ;
