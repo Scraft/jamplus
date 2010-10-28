@@ -1,3 +1,6 @@
+# -----------------------------------------------------------------
+# Setup what extensions/features this platform has.
+# -----------------------------------------------------------------
 {
 	SUFEXE			= .elf ;
 	SUFLIB			= .a ;
@@ -11,77 +14,67 @@
 	C.Flags M	: * : -lang objc ;
 	C.Flags MM	: * : -lang objc ;
 
-	PCHCCFLAGS = -lang c ;
-	PCHC++FLAGS = -lang c++ ;
-	PCHMFLAGS = -precompile ;
-	PCHMMFLAGS = -precompile ;
+	PCHCCFLAGS		= -lang c ;
+	PCHC++FLAGS		= -lang c++ ;
+	PCHMFLAGS		= -precompile ;
+	PCHMMFLAGS		= -precompile ;
 
-	NOARSCAN = true ;
-	NOARUPDATE = true ;
+	NOARSCAN		= true ;
+	NOARUPDATE		= true ;
 }
 
 if ! $(TARGETINFO_LOCATE) {
 
-# -------------------------------------------------------------------------------------
+# -----------------------------------------------------------------
+# Rules performing each stage of the build.
+# -----------------------------------------------------------------
 
-actions updated together piecemeal response C.Archive
-{
-	"$(C.AR)" @@($(LIBFLAGS) $(<:C) $(>:C))
-}
-
+# Create an application (.elf) from a bunch of objects/libraries.
 actions response C.Link
 {
-	"$(C.LINK)" @@(-application $(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:T) -map $(<:CS=.map)) -o $(<[1]:C)
+	$(C.LINK:\\C) @@(-application $(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:T) -map $(<:CS=.map) -o $(<[1]:C))
 }
 
+# Create archive (.a) from a bunch of objects.	
+actions response C.Archive
+{
+	$(C.AR:\\C) @@(-library $(LIBFLAGS) -proc gekko $(>:C) -o $(<:C))
+}
+
+# Optimize (index) a library (.a).
 actions together C.Ranlib
 {
-	"$(C.RANLIB)" $(<:C)
+	$(C.RANLIB:\\C) @@($(<:C))
 }
 
-#
-# NOARUPDATE - can't update an archive
-#
-
-if $(NOARUPDATE)
-{
-	actions response C.Archive
-	{
-		"$(C.AR)" @@(-library $(LIBFLAGS) -proc gekko $(>:C)) -o $(<:C)
-	}
-}
-
+# Compile C files (.c) into object files (.o).
 actions updated response C.CC
 {
-	"$(C.CC)" -c $(MFLAGS) $(>:C)
+	$(C.CC:\\C) @@(-c $(MFLAGS) $(>:C) -o $(<[0]:D\\C))
 }
 
-#	PATH=$(MSVCNT_BIN_PATH);%PATH%
-#	SET INCLUDE=$(C.STDHDRS:\\J=;)
-#	$(C.C++:\\C) /nologo @@($(MFLAGS)) $(>:C)
-
-# Notes:
-# 1. Using FOR loop to print out filenames, as Jam will only print out first in group.
-# 2. @@( bla ) will put bla into response file and put @responsefile into command line.
-# <[0] gets first output file, :D gets path, :\\ converts '/' to '\' and :C escapes/quotes string
+# Compile C++ files (.cpp) into object files (.o).
 actions updated response C.C++
 {
 	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
-	"$(C.C++:\\C)" -c $(MFLAGS) $(>:C) -o $(<[0]:D\\C)
+	$(C.C++:\\C) @@(-c $(MFLAGS) $(>:C) -o $(<[0]:D\\C))
 }
 
+# Compile PCH header files (.h) into precompiled header files (.h.pch).
 actions updated response C.PCH
 {
-	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+	$(C.C++:\\C) @@(-c $(MFLAGS)) $(>:C)
 }
 
+# -----------------------------------------------------------------
 
+# Rule to force include a given file when compiling.
 rule C._ForceIncludeHelper
 {
 	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
 }
 
-
+# Rule to enable/disable exceptions.
 rule C._C++Exceptions
 {
 	if ! $(TYPE)  ||  $(TYPE) = false
@@ -94,64 +87,7 @@ rule C._C++Exceptions
 	}
 }
 
-rule C.__MultiCppCompile_SetupFlags
-{
-	if $(_pch[1])  &&  ! $(_nopch) {
-		#_flags += -Winvalid-pch ;
-
-		local md5 = [ MD5 $(_flags) ] ;
-		local _pchName = @($(_pch[3]:LDBS):G=$(grist)-$(md5)) ;
-		local _pchFilename = $(_pchName).gch ;
-
-		if ! $(built-$(_pchName)) {
-			built-$(_pchName) = 1 ;
-
-			local pchext = $(_pchName:S) ;
-			local pchBUILD_EXT = C.BUILD$(pchext) ;
-
-			MakeLocate $(_pchFilename) : $(LOCATE_TARGET)/$(_pchName:S=:G=)-$(md5) ;
-
-			newsrcs += $(_pchName) ;
-
-			PCHFLAGS.$(PLATFORM).$(CONFIG) on $(_pchFilename) += $($($(pchBUILD_EXT).PCHFLAGS)) ;
-			MFLAGS on $(_pchName) = $($(pchBUILD_EXT).RULE) $($(pchBUILD_EXT).SUFOBJ) $($(pchBUILD_EXT).ADD_TO_LINK) $(_flags[5-]) $($($(BUILD_EXT).PCHFLAGS)) -precompile \"$(_pchFilename:T:\\)\" ;
-
-			#Echo Adding depending of $(_pchFilename) \: $(_pchName) ;
-			Depends $(_pchFilename) : $(_pchName) ;
-			SEARCH on $(_pchName) = $(_hdrs) ;
-		}
-
-		_flags += -include $(_pchFilename:T:\\) ;
-
-		# if the source should use pch
-		if $(_pch[2]) {
-			# mark that compilation will depend on it
-			# Echo Adding depending 2 of $(_src) \: $(_pchFilename) ;
-			Includes $(_src) : $(_pchFilename) ;
-		}
-
-		if $(_pch[3]) {
-			# Echo Adding depending 3 of $(_obj) \: $(_pchFilename) ;
-			Depends $(_obj) : $(_pchFilename) ;
-		}
-	}
-
-	Includes $(_src) : $(objectForceIncludes) ;
-	SEARCH on $(objectForceIncludes) = $(_hdrs) ;
-	_flags += "-include $(objectForceIncludes:G=)" ;
-	
-	# Force one file at a time with this?
-	local gameapiFile = $(_src:TI=.*gameapi.*) ;
-	if "" = $(gameapiFile)
-	{
-	}
-	else
-	{
-		_flags += "-o \"$(_obj:T)\"" ;
-	}
-
-	#_flags += "-precompile \"" + _pchFilename + "\"" ;
-}
+# -----------------------------------------------------------------
 
 # Defines that apply to all targets, in all configurations, for Wii platform.
 C.Defines * : 			
@@ -165,11 +101,20 @@ C.Defines * :
 	IOP_REV=1 	 
 : * : wii ;
 
-# C++ flags.
+# -----------------------------------------------------------------
+
+# C/C++ Flags
+C.CFlags * :
+	-proc gekko
+	-align powerpc 
+: * : wii ;
+
 C.C++Flags * :
 	-proc gekko
 	-align powerpc 
 : * : wii ;
+
+# -----------------------------------------------------------------
 
 # Prebuilt libraries - this seems like a reasonable list of basic libraries required to build any real Wii project.
 # This doesn't include os, gx, dvd, HomeButtonLib as projects will often want to link against the debug versions of these
@@ -217,11 +162,22 @@ C.LinkPrebuiltLibraries	* :
 	$(CW_ROOT)PowerPC_EABI_Support/MetroTRK/TRK_Hollywood_Revolution.a
 : * : wii ;
 
-VSCONFIGMAP.debug	= Debug ;
-VSCONFIGMAP.debrel	= DebRel ;
-VSCONFIGMAP.release	= Release ;
-VSCONFIGMAP.final	= Final ;
-
-VSPLATFORMMAP.wii	= "Wii" ;
+# -----------------------------------------------------------------
 
 } # TARGETINFO_LOCATE
+
+# -----------------------------------------------------------------
+
+# Map Jam build configurations to VS configurations.
+VSCONFIGMAP.debug	= Debug ;
+VSCONFIGMAP.optibug	= Optibug ;
+VSCONFIGMAP.artist	= Artist ;
+VSCONFIGMAP.qa		= QA ;
+VSCONFIGMAP.master	= Master ;
+
+# -----------------------------------------------------------------
+
+# Map build platform to VS platform.
+VSPLATFORMMAP.wii	= "Wii" ;
+
+# -----------------------------------------------------------------
