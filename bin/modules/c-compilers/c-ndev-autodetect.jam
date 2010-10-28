@@ -34,7 +34,6 @@ rule C.AutoDetect
 	UseModule c-compilers/c-ndev ;
 	if $(PLATFORM) != *  &&  $(CONFIG) != * {
 		UseModule c-compilers/$(PLATFORM)-ndev ;
-		UseModule c-compilers/$(PLATFORM)-ndev-$(CONFIG) ;
 	}
 
 	return $(COMPILER.$(PLATFORM)) ;
