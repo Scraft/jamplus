@@ -1,27 +1,31 @@
+# -----------------------------------------------------------------
+# Setup what extensions/features this platform has.
+# -----------------------------------------------------------------
 {
-	SUFEXE	?= ".elf" ;
-	SUFLIB	?= .a ;
-	SUFMODULE ?= .so ;
-	SUFOBJ	?= .o ;
-	SUFSHAREDLIB ?= .so ;
+	SUFEXE			= .elf ;
+	SUFLIB			= .a ;
+	SUFMODULE		= .so ;
+	SUFOBJ			= .o ;
+	SUFSHAREDLIB	= .so ;
 
 	C.Flags CC	: * : -Tc ;
 	C.Flags C++	: * : -Tp ;
-#	C.Flags M	: * : -x objective-c ;
-#	C.Flags MM	: * : -x objective-c++ ;
 
-#	PCHCCFLAGS = -x c-header ;
-#	PCHC++FLAGS = -x c++-header ;
-#	PCHMFLAGS = -x objective-c-header ;
-#	PCHMMFLAGS = -x objective-c++-header ;
-
-	NOARSCAN = true ;
-#	NOARUPDATE = true ;
+	NOARSCAN		= true ;
+	NOARUPDATE		= true ;
 }
 
 if ! $(TARGETINFO_LOCATE) {
 
-rule C.FDefines { return -D$(<) ; }
+# -----------------------------------------------------------------
+# Rules for defining, including and setting up lib directories.
+# -----------------------------------------------------------------
+
+rule C.FDefines 
+{ 
+	return -D$(<) ; 
+}
+# There is a bug in the SN response file parsing that means -I"." will fail, so fix this case!
 rule C.FIncludes 
 { 
 	if "$(<)" = "."
@@ -33,11 +37,52 @@ rule C.FIncludes
 		return -I\"$(<)\" ; 
 	}
 }
-rule C.FLibraryPaths { return -L\"$(<)\" ; }
+rule C.FLibraryPaths 
+{ 
+	return -L\"$(<)\" ; 
+}
 
-# ----------------------------------------------------------
+# -----------------------------------------------------------------
+# Rules performing each stage of the build.
+# -----------------------------------------------------------------
+
+# Create an application (.elf) from a bunch of objects/libraries.
+actions response screenoutput C.Link
+{
+	Echo @ C.Link patience...
+	$(C.LINK:\\C) @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) --start-group $(LINKLIBS:T) --end-group -Wl,--Map=$(<[1]:CS=.map) -o $(<[1]:C))
+}
+
+# Create archive (.a) from a bunch of objects.	
+actions response C.Archive
+{
+	IF EXIST $(<:C\\). ( DEL $(<:C\\) )
+	$(C.AR:\\C) @@(-ruc $(LIBFLAGS) $(<:C) $(>:C))
+}
+
+# Optimize (index) a library (.a).
+actions together response C.Ranlib
+{
+	$(C.RANLIB:\\C) @@($(<:C))
+}
+
+# Compile C files (.c) into object files (.o).
+actions updated response C.CC
+{
+	$(C.C++:\\C) @@($(MFLAGS) -c $(>:C) -o $(<[1]:C))
+}
+
+# Compile C++ files (.cpp) into object files (.o).
+actions updated response C.C++
+{	
+	$(C.C++:\\C) @@($(MFLAGS) -c $(>:C) -o $(<[1]:C))
+}
+
+# -----------------------------------------------------------------
 # Copied from c-gcc as SN Jam stuff isn't using this module (yet?).
+# -----------------------------------------------------------------
 
+# Setup what ends up on the command line given a bunch of libraries.
 rule C._LinkPrebuiltLibraries
 {
 	local lib ;
@@ -50,6 +95,7 @@ rule C._LinkPrebuiltLibraries
 	}
 }
 
+# Can fill this rule in if we need to add support for linking against a static vs dynamic runtime.
 rule C._RuntimeTypeHelper
 {
 	if ! $(TYPE)  ||  $(TYPE) = dynamic
@@ -60,66 +106,15 @@ rule C._RuntimeTypeHelper
 	}
 }
 
-# ----------------------------------------------------------
-
-actions updated together piecemeal response C.Archive
-{
-	"$(C.AR)" @@(-ru $(LIBFLAGS) $(<:C) $(>:C))
-}
-
-actions response screenoutput C.Link
-{
-	Echo @ C.Link patience...
-	"$(C.LINK)" @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) --start-group $(LINKLIBS:T) --end-group) -o $(<[1]:C)
-}
-
-actions together response C.Ranlib
-{
-	"$(C.RANLIB)" $(<:C)
-}
-
-#
-# NOARUPDATE - can't update an archive
-#
-
-if $(NOARUPDATE)
-{
-	actions response C.Archive
-	{
-		"$(C.AR)" -ru $(LIBFLAGS) $(<:C) @@($(>:C))
-	}
-}
-
-actions updated response screenoutput C.CC
-{
-	"$(C.CC)" -c $(MFLAGS) $(>:C)
-}
-
-actions updated response screenoutput C.C++
-{	
-	PUSHD $(<[0]:D\\C)
-	$(C.C++:\\C) $(MFLAGS) -c $(>:C)
-	SET RET=%ERRORLEVEL%
-	POPD
-	EXIT /B %RET%
-}
-
-actions updated response C.PCH
-{		
-	PUSHD $(1:D\\C)\..
-	"$(C.C++)" $(MFLAGS) -c $(2:S=.cpp)
-	SET RET=%ERRORLEVEL%
-	POPD
-	EXIT /B %RET%
-}
-
-
+# Helper rule to force compiler to include a file for us.
 rule C._ForceIncludeHelper
 {
 	C.AddFlags $(TARGET) : "-include $(INCLUDES)" : $(THE_CONFIG:E=*) : $(THE_PLATFORM:E=*) ;
 }
 
+# -----------------------------------------------------------------
 
+# Helper rule to handle precompiled headers, taken from the VC version.
 rule C._MultiCppCompile_SetupFlags
 {
 	if $(postREFERENCEDIRECTORIES[1]) {
@@ -166,6 +161,7 @@ rule C._MultiCppCompile_SetupFlags
 	_flags += $(_postmflags) ;
 }
 
+# Helper rule to handle precompiled headers, taken from the VC version.
 rule C._MultiCppCompile_PchDeps
 {
 	if $(_pch1[4]) {
@@ -177,8 +173,13 @@ rule C._MultiCppCompile_PchDeps
 	}
 }
 
+# -----------------------------------------------------------------
+
 } # TARGETINFO_LOCATE
 
+# -----------------------------------------------------------------
+
+# Setup build extensions, taken from GCC.
 C.BUILD_EXTENSIONS = $(SUFOBJ) ;
 C.AddBuildExtensions CC : .c .s : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
 C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
@@ -186,9 +187,18 @@ C.AddBuildExtensions M : .m : C.CC : $(SUFOBJ) "" : 1 1 0 : 1 ;
 C.AddBuildExtensions MM : .mm : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
 C.AddBuildExtensions PCH : .h .pch : C.PCH : "" .gch ;
 
+# -----------------------------------------------------------------
+
+# Map Jam build configurations to VS configurations.
 VSCONFIGMAP.debug	= Debug ;
-VSCONFIGMAP.debrel	= DebRel ;
-VSCONFIGMAP.release	= Release ;
+VSCONFIGMAP.optibug	= optibug ;
+VSCONFIGMAP.artist	= Artist ;
+VSCONFIGMAP.qa		= QA ;
 VSCONFIGMAP.final	= Final ;
 
+# -----------------------------------------------------------------
+
+# Map build platform to VS platform.
 VSPLATFORMMAP.ps3sn	= "PS3-SN" ;
+
+# -----------------------------------------------------------------
