@@ -1,0 +1,7 @@
+C.AR		?= "$(PS3_PPU_ARCHIVE)" ;
+C.CC		?= "$(PS3_SNC)" ;
+C.C++		?= "$(PS3_SNC)" ;
+C.LINK		?= "$(PS3_GCC_GCC)" ;
+C.RANLIB	?= "$(PS3_PPU_RANLIB)" ;
+
+UseModule c-compilers/ps3-shared ;
