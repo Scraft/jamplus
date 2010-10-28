@@ -48,34 +48,52 @@ rule C._RuntimeTypeHelper
 	if ! $(TYPE)  ||  $(TYPE) = dynamic
 	{
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) -= /MDd ;
-		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) -= /MDd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).optibug on $(TARGET) -= /MDd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) -= /MD ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).artist on $(TARGET) -= /MD ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) -= /MD ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).qa on $(TARGET) -= /MD ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).master on $(TARGET) -= /MD ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) += /MTd ;
-		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) += /MTd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).optibug on $(TARGET) += /MTd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) += /MT ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).artist on $(TARGET) += /MT ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MT ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).qa on $(TARGET) += /MT ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).master on $(TARGET) += /MT ;
 
 		FLAGS_TO_ADD.$(THE_PLATFORM).debug on $(TARGET) += /MDd ;
-		FLAGS_TO_ADD.$(THE_PLATFORM).debrel on $(TARGET) += /MDd ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).optibug on $(TARGET) += /MDd ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).release on $(TARGET) += /MD ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).artist on $(TARGET) += /MD ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MD ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).qa on $(TARGET) += /MD ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).master on $(TARGET) += /MD ;
 	}
 	else if $(TYPE) = static
 	{
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) -= /MTd ;
-		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) -= /MTd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).optibug on $(TARGET) -= /MTd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) -= /MT ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).artist on $(TARGET) -= /MT ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) -= /MT ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).qa on $(TARGET) -= /MT ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).master on $(TARGET) -= /MT ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).debug on $(TARGET) += /MDd ;
-		FLAGS_TO_REMOVE.$(THE_PLATFORM).debrel on $(TARGET) += /MDd ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).optibug on $(TARGET) += /MDd ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).release on $(TARGET) += /MD ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).artist on $(TARGET) += /MD ;
 		FLAGS_TO_REMOVE.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MD ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).qa on $(TARGET) += /MD ;
+		FLAGS_TO_REMOVE.$(THE_PLATFORM).master on $(TARGET) += /MD ;
 
 		FLAGS_TO_ADD.$(THE_PLATFORM).debug on $(TARGET) += /MTd ;
-		FLAGS_TO_ADD.$(THE_PLATFORM).debrel on $(TARGET) += /MTd ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).optibug on $(TARGET) += /MTd ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).release on $(TARGET) += /MT ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).artist on $(TARGET) += /MT ;
 		FLAGS_TO_ADD.$(THE_PLATFORM).releaseltcg on $(TARGET) += /MT ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).qa on $(TARGET) += /MT ;
+		FLAGS_TO_ADD.$(THE_PLATFORM).master on $(TARGET) += /MT ;
 	}
 }
 
@@ -96,25 +114,25 @@ actions response C.Link
 {
 	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
-	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) $(LINKLIBS:CT)) /out:$(<[1])
+	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT) /MAP) /out:$(<[1]:C\\)
 }
 
 actions response C.DebugLinkWithManifest
 {
 	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
-	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) $(LINKLIBS:CT)) /out:$(<[1])
+	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT)) /out:$(<[1]:C\\)
 	if exist $(MANIFEST).intermediate.manifest "$(C.MT:\\)" -nologo -notify_update -manifest $(MANIFEST).intermediate.manifest -out:$(MANIFEST).embed.manifest &
 	if "%ERRORLEVEL%" == "1090650113" echo $(MANIFEST_TYPE) 24 "$(MANIFEST).embed.manifest" > "$(MANIFEST).embed.rc" &
 	"$(C.RC:\\)" /fo $(MANIFEST).embed.res $(MANIFEST).embed.rc &
-	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>) $(NEEDLIBS:TC) $(LINKLIBS:CT)) /out:$(<[1])
+	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT) /MAP) /out:$(<[1]:C\\)
 }
 
 actions response C.LinkWithManifest
 {
 	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
-	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>) $(NEEDLIBS:TC) $(LINKLIBS:CT)) /out:$(<[1])
+	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT) /MAP) /out:$(<[1]:C\\)
 	"$(C.MT:\\)" -nologo -manifest $(MANIFEST).intermediate.manifest -outputresource:$(<[1]);$(MANIFEST_TYPE)
 }
 
@@ -167,7 +185,7 @@ rule C._writeManifest TARGET : _t : MANIFEST_TYPE
 	MakeLocate $(tempIntermediateManifest) : $(LOCATE_TARGET) ;
 	Clean clean:$(TARGET) : $(tempIntermediateManifest) ;
 
-	if $(CONFIG) in debug debrel
+	if $(CONFIG) in debug optibug
 	{
 		local tempEmbeddedManifest = @($(_t[1]).embed.manifest:G=$(grist)) ;
 		MakeLocate $(tempEmbeddedManifest) : $(LOCATE_TARGET) ;
@@ -347,7 +365,7 @@ rule C._ApplicationFromObjects_LinkFlags
 
 	if $(COMPILER.$(PLATFORM)) != vc6 {
 		if manifest in $(OPTIONS) {
-			if $(CONFIG) in debug debrel {
+			if $(CONFIG) in debug optibug {
 				linkRule = C.DebugLinkWithManifest ;
 			} else {
 				linkRule = C.LinkWithManifest ;
@@ -423,7 +441,7 @@ rule C._SharedLibraryFromObjects_LinkFlags
 
 	if $(COMPILER.$(PLATFORM)) != vc6 {
 		if manifest in $(OPTIONS) {
-			if $(CONFIG) in debug debrel {
+			if $(CONFIG) in debug optibug {
 				linkRule = C.DebugLinkWithManifest ;
 			} else {
 				linkRule = C.LinkWithManifest ;
