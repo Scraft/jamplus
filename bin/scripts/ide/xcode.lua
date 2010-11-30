@@ -401,7 +401,7 @@ local function XcodeHelper_WriteXCBuildConfigurations(self, info, projectName)
 			table.insert(self.Contents, "\t\t\t\tPLATFORM = " .. platformName .. ";\n")
 			table.insert(self.Contents, "\t\t\t\tCONFIG = " .. configName .. ";\n")
 			if configInfo.OutputPath ~= '' then
-				table.insert(self.Contents, "\t\t\t\tCONFIGURATION_BUILD_DIR = \"" .. configInfo.OutputPath .. "\";\n")
+				table.insert(self.Contents, "\t\t\t\tCONFIGURATION_BUILD_DIR = \"" .. os.path.remove_slash(configInfo.OutputPath) .. "\";\n")
 			end
 			
 			local productName = configInfo.OutputName
@@ -413,7 +413,8 @@ local function XcodeHelper_WriteXCBuildConfigurations(self, info, projectName)
 ]]			
 			table.insert(self.Contents, "\t\t\t\tPRODUCT_NAME = \"" .. ((productName and productName ~= '') and productName or projectName) .. "\";\n")
 --			table.insert(self.Contents, '\t\t\t\tINFOPLIST_FILE = "myopengl-Info.plist";\n');
---			table.insert(self.Contents, "\t\t\t\tOS = MACOSX;\n")
+
+			-- Write SDKROOT.
 			local sdkRoot
 			if subProject.XCODE_SDKROOT  and  subProject.XCODE_SDKROOT[platformName]  and  subProject.XCODE_SDKROOT[platformName][configName] then
 				sdkRoot = subProject.XCODE_SDKROOT[platformName][configName]
@@ -423,6 +424,18 @@ local function XcodeHelper_WriteXCBuildConfigurations(self, info, projectName)
 			if sdkRoot then
 				table.insert(self.Contents, "\t\t\t\tSDKROOT = " .. sdkRoot .. ";\n")
 			end
+
+			-- Write CODE_SIGN_ENTITLEMENTS.
+			local codeSignEntitlements
+			if subProject.XCODE_ENTITLEMENTS  and  subProject.XCODE_ENTITLEMENTS[platformName]  and  subProject.XCODE_ENTITLEMENTS[platformName][configName] then
+				codeSignEntitlements = subProject.XCODE_ENTITLEMENTS[platformName][configName]
+			elseif Projects['C.*']  and  Projects['C.*'].XCODE_ENTITLEMENTS  and  Projects['C.*'].XCODE_ENTITLEMENTS[platformName]  and  Projects['C.*'].XCODE_ENTITLEMENTS[platformName][configName] then
+				codeSignEntitlements = Projects['C.*'].XCODE_ENTITLEMENTS[platformName][configName]			
+		   	end
+			if codeSignEntitlements then
+				table.insert(self.Contents, "\t\t\t\tCODE_SIGN_ENTITLEMENTS = " .. codeSignEntitlements .. ";\n")
+			end
+
 			if platformName == 'macosx32'  or  platformName == 'macosx64' then
 				table.insert(self.Contents, "\t\t\t\tARCHS = \"$(ARCHS_STANDARD_32_64_BIT)\";\n");
 			elseif platformName == 'iphone' then

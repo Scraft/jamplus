@@ -65,6 +65,8 @@ function TestPattern(patterns, lines)
 	local lastMatchedLineIndex = 0
 	while lineIndex <= #lines  and  (patternIndex - #oooPatternsToFind) <= #patterns do
 		local line = lines[lineIndex]:gsub('^%s+', ''):gsub('%s+$', '')
+		line = line:gsub('@%s*%d+%%', '@')
+
 		local pattern
 		local ooo
 		local ooogroup = oooGroupPatternsToFind[1] ~= nil
@@ -284,7 +286,7 @@ function TestFiles(expectedFiles)
 
 	local extraFiles = {}
 	for foundFile in pairs(foundFilesMap) do
-		if foundFile ~= 'test.lua'  and  foundFile ~= 'test.out' then
+		if foundFile ~= 'test.lua'  and  foundFile ~= 'test.out'  and  not foundFile:match('%.swp') then
 			if not expectedFilesMap[foundFile] then
 				local found = false
 				for _, fileName in ipairs(expectedFiles) do
