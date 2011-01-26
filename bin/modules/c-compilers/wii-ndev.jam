@@ -39,6 +39,20 @@ STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\MSL_Common\\Include ;
 STDHDRS	+= $(CW_ROOT)PowerPC_EABI_Support\\MSL\\MSL_C\\PPC_EABI\\Include ;
 
 C.STDHDRS += $(STDHDRS) ; 
+
+CompilerFlagsGeneric =
+	-nostdinc
+	-I- 
+	-cwd include
+	-enum int
+	;
+
+C.CFlags	* : $(CompilerFlagsGeneric)	;
+C.C++Flags	* : $(CompilerFlagsGeneric)	;
+	
+C.Defines * :
+	_WII
+	;
 	
 # -------------------------------------------------------------------------------------
 

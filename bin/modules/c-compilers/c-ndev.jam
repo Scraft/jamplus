@@ -139,7 +139,7 @@ C.LinkPrebuiltLibraries	* :
 	$(NDEV_ROOT)/RVL_SDK/RVL/lib/nand.a
 	$(NDEV_ROOT)/RVL_SDK/RVL/lib/kpad.a
 	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wpad.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wud.a
+#	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wud.a
 	$(NDEV_ROOT)/RVL_SDK/RVL/lib/bte.a
 	$(NDEV_ROOT)/RVL_SDK/RVL/lib/odenotstub.a
 	$(NDEV_ROOT)/RVL_SDK/RVL/lib/pad.a
@@ -161,6 +161,18 @@ C.LinkPrebuiltLibraries	* :
 	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib/fdlibm.ppceabi.h.a
 	$(CW_ROOT)PowerPC_EABI_Support/MetroTRK/TRK_Hollywood_Revolution.a
 : * : wii ;
+
+C.LinkPrebuiltLibraries	* :	
+	osD.a
+	gxD.a
+	dvdD.a
+: debug : wii ;
+
+C.LinkPrebuiltLibraries	* :	
+	os.a
+	gx.a
+	dvd.a
+: release : wii ;
 
 # -----------------------------------------------------------------
 
