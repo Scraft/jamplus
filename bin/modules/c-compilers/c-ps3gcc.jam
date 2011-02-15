@@ -68,7 +68,12 @@ actions together response C.Ranlib
 # Compile C files (.c) into object files (.o).
 actions updated response C.CC
 {
+	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO %%I
+	pushd $(<[0]:D\\C)
 	$(C.CC:\\C) @@(-c $(MFLAGS) $(>:C))
+	SET RET=%ERRORLEVEL%
+	popd
+	EXIT /B %RET%
 }
 
 # Compile C++ files (.cpp) into object files (.o).
