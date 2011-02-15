@@ -1,4 +1,4 @@
-# test comment
+
 WII_OUTPUT_PARSER_KEY = HKEY_CURRENT_USER Software TTGames WiiOutputParser Path ;
 WII_OUTPUT_PARSER_VALUE = [ W32_GETREG $(WII_OUTPUT_PARSER_KEY) ] ;
 
@@ -6,6 +6,7 @@ if $(WII_OUTPUT_PARSER_VALUE)
 {
 	WII_OUTPUT_PARSER = $(WII_OUTPUT_PARSER_VALUE)/WiiOutputParser.exe ;
 	
+	C.ASM		?= "$(WII_OUTPUT_PARSER)" "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwasmeppc.exe" ;
 	C.CC		?= "$(WII_OUTPUT_PARSER)" "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
 	C.C++		?= "$(WII_OUTPUT_PARSER)" "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
 	C.LINK		?= "$(WII_OUTPUT_PARSER)" "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
@@ -17,6 +18,7 @@ if $(WII_OUTPUT_PARSER_VALUE)
 }
 else
 {
+	C.ASM		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwasmeppc.exe" ;
 	C.CC		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
 	C.C++		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwcceppc.exe" ;
 	C.LINK		?= "$(CW_COMMAND_LINE_TOOLS_DIRECTORY)/mwldeppc.exe" ;
@@ -66,9 +68,13 @@ rule C._ApplicationFromObjects_PostBuild
 
 # -------------------------------------------------------------------------------------
 
-C.LinkFlags       * : -proc gekko -nodefaults -nostdlib -fp hardware ;
-C.CFlags          * : -fp hardware ;
-C.C++Flags        * : -fp hardware ;
+C.AddBuildExtensions ASM : .s : C.ASM : $(SUFOBJ) "" : 1 1 0 : 1 ;
+
+# -------------------------------------------------------------------------------------
+
+C.LinkFlags       * : -proc gekko -nodefaults -nostdlib -fp fmadd ;
+C.CFlags          * : -fp fmadd ;
+C.C++Flags        * : -fp fmadd ;
 C.LinkDirectories * : $(NDEV_ROOT:\\)\\RVL_SDK\\RVL\\lib ;
 
 VSPLATFORMMAP.wii = "Wii" ;
