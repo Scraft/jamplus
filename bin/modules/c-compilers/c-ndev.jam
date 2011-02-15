@@ -23,6 +23,14 @@
 	NOARUPDATE		= true ;
 }
 
+# -----------------------------------------------------------------
+# Override these GCC default rules to allow for spaces...
+# -----------------------------------------------------------------
+
+rule C.FDefines			{ return -D$(<) ; }
+rule C.FIncludes		{ return -I\"$(<)\" ; }
+rule C.FLibraryPaths	{ return -L\"$(<)\" ; }
+
 if ! $(TARGETINFO_LOCATE) {
 
 # -----------------------------------------------------------------
@@ -64,6 +72,12 @@ actions updated response C.C++
 actions updated response C.PCH
 {
 	$(C.C++:\\C) @@(-c $(MFLAGS)) $(>:C)
+}
+
+actions response C.ASM
+{
+	FOR %%I IN ( $(>[2-]:CBS) ) DO ECHO @ C.ASM - %%I
+	$(C.ASM:\\C) @@(-c $(MFLAGS) -proc gekko -gdwarf-2 $(>:C) -o $(<[0]:D\\C))
 }
 
 # -----------------------------------------------------------------
@@ -120,46 +134,56 @@ C.C++Flags * :
 # This doesn't include os, gx, dvd, HomeButtonLib as projects will often want to link against the debug versions of these
 # under certain circumstance (out of our control). Perhaps other libraries in this list will need simliar options, but this
 # can at least be a starting point...
+C.LinkDirectories * :
+	$(NDEV_ROOT)/lib
+	$(NDEV_ROOT)/RVL_SDK/RVL/lib
+	$(CW_ROOT)PowerPC_EABI_Support/Runtime/Lib
+	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib
+	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C++/PPC_EABI/Lib
+	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib
+	$(CW_ROOT)PowerPC_EABI_Support/MetroTRK
+	;
+
 C.LinkPrebuiltLibraries	* :			
-	$(NDEV_ROOT)/lib/NdevExi2A.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ai.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ax.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/axart.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/axfx.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/base.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/db.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/dsp.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/euart.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/exi.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/fs.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/ipc.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mem.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mtx.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/mix.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/nand.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/kpad.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wpad.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wud.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/bte.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/odenotstub.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/pad.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/sc.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/seq.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/si.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/syn.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/usb.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/vi.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wpad.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/tpl.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/arc.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/wenc.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/esp.a
-	$(NDEV_ROOT)/RVL_SDK/RVL/lib/cx.a
-	$(CW_ROOT)PowerPC_EABI_Support/Runtime/Lib/runtime.ppceabi.h.a
-	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib/msl_c.ppceabi.bare.h.a
-	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C++/PPC_EABI/Lib/msl_c++.ppceabi.bare.h.a
-	$(CW_ROOT)PowerPC_EABI_Support/MSL/MSL_C/PPC_EABI/Lib/fdlibm.ppceabi.h.a
-	$(CW_ROOT)PowerPC_EABI_Support/MetroTRK/TRK_Hollywood_Revolution.a
+	NdevExi2A.a
+	ai.a
+	ax.a
+	axart.a						# not used
+	axfx.a
+	base.a
+	db.a						# not used
+	dsp.a
+	euart.a
+	exi.a
+	fs.a
+	ipc.a
+	mem.a
+	mtx.a
+	mix.a
+	nand.a
+	kpad.a
+	wpad.a
+	wud.a						# not used
+	bte.a
+	odenotstub.a				# not used
+	pad.a
+	sc.a
+	seq.a						# not used
+	si.a
+	syn.a						# not used
+	usb.a
+	vi.a
+	wpad.a						# not used
+	tpl.a
+	arc.a
+	wenc.a
+	esp.a
+	cx.a
+	runtime.ppceabi.h.a
+	msl_c.ppceabi.bare.h.a
+	msl_c++.ppceabi.bare.h.a	# not used
+	fdlibm.ppceabi.h.a			# not used
+	TRK_Hollywood_Revolution.a	
 : * : wii ;
 
 # -----------------------------------------------------------------
