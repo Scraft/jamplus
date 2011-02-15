@@ -208,10 +208,11 @@ rule C._MultiCppCompile_SetupFlags
 	if ! ( $(PF) in wii ps3 )
 	{
 		_flags += "-o \"$(_obj:T)\"" ;
-	}
 	
-	if $(C_LIBRARY_SHARED_MODULE) {
-		_flags += -fPIC ;
+		if $(C_LIBRARY_SHARED_MODULE) 
+		{
+			_flags += -fPIC ;
+		}
 	}
 }
 
