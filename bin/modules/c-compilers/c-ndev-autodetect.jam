@@ -1,5 +1,9 @@
 rule FindCwCompiler
 {
+	# Handle paths with spaces in.
+	CWFOLDER_RVL	= $(CWFOLDER_RVL:J=" ") ;
+	NDEV			= $(NDEV:J=" ") ;
+
 	local gcc = [ Glob $(CWFOLDER_RVL)PowerPC_EABI_Tools/Command_Line_Tools : mwcceppc.exe ] ;
 	
 	if ! $(gcc)
