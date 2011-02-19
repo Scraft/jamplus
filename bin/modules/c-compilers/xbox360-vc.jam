@@ -13,13 +13,14 @@ rule ImageXexHelper
 	on $(TARGET) _configFile = $(CONFIG_FILE) ;
 	
 	local xex = $(_t:S=.xex) ;
+	local pe  = $(_t:S=.pe) ;
 	MakeLocate $(xex) : $(outputPath) ;
 	Depends $(TARGET) : $(xex) : $(_t) ;
 	Clean clean:$(TARGET) : $(xex) $(xex:S=.pe) $(xex:S=.xdb) ;
 	if $(_configFile)
 	{
 		Depends $(xex) : $(_configFile) ;
-		ImageXexWithConfig $(xex) : $(_t) $(_configFile) ;
+		ImageXexWithConfig $(xex) : $(pe) $(_configFile) ;
 	}
 	else
 	{
