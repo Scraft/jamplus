@@ -1,10 +1,9 @@
 ######################################################################################################################
-C.AR			?= "$(NDKROOT)\\build\\prebuilt\\windows\\arm-eabi-4.2.1\\bin\\arm-eabi-ar.exe" ru ;
-C.CC			?= "$(NDKROOT)\\build\\prebuilt\\windows\\arm-eabi-4.2.1\\bin\\arm-eabi-gcc.exe" ;
-C.C++			?= "$(NDKROOT)\\build\\prebuilt\\windows\\arm-eabi-4.2.1\\bin\\arm-eabi-g++.exe" ;
-C.LINK			?= "$(NDKROOT)\\build\\prebuilt\\windows\\arm-eabi-4.2.1\\bin\\arm-eabi-gcc.exe" ;
-C.RANLIB		?= "$(NDKROOT)\\build\\prebuilt\\windows\\arm-eabi-4.2.1\\bin\\arm-eabi-ranlib.exe" ;
-C.STRIP			?= "$(NDKROOT)\\build\\prebuilt\\windows\\arm-eabi-4.2.1\\bin\\arm-eabi-strip.exe" ;
+C.AR			?= "$(NDK_TOOLCHAIN_ROOT)/bin/arm-eabi-ar$(HOST_SUFEXE)" ru ;
+C.CC			?= "$(NDK_TOOLCHAIN_ROOT)/bin/arm-eabi-gcc$(HOST_SUFEXE)" ;
+C.C++			?= "$(NDK_TOOLCHAIN_ROOT)/bin/arm-eabi-g++$(HOST_SUFEXE)" ;
+C.LINK			?= "$(NDK_TOOLCHAIN_ROOT)/bin/arm-eabi-gcc$(HOST_SUFEXE)" ;
+C.RANLIB		?= "$(NDK_TOOLCHAIN_ROOT)/bin/arm-eabi-ranlib$(HOST_SUFEXE)" ;
 
 ######################################################################################################################
 # Our 'exe' is actually a shared lib, so make extension .so file.
@@ -12,18 +11,15 @@ SUFEXE		= .so ;
 SUFMODULE	= .so ;
 
 ######################################################################################################################
-# The NDK doesn't (didn't at least, haven't tried latest) ship with stl support. So need to download the ndk wrappers
-# and build STL port manually. The integration expects this to be done and for an environment variabile called
-# NDK_WRAPPERS_BASE to point to the directory.
 	
-NDK_MAIN_LIB_DIR	=  $(NDKROOT)/build/platforms/android-4/arch-arm/usr/lib ;
-NDK_SEC_LIB_DIR		=  $(NDKROOT)/build/prebuilt/windows/arm-eabi-4.2.1/lib/gcc/arm-eabi/4.2.1/interwork ;
+NDK_MAIN_LIB_DIR	=  $(NDKROOT)/platforms/$(NDK_PLATFORM)/arch-arm/usr/lib ;
+NDK_SEC_LIB_DIR		=  $(NDK_TOOLCHAIN_ROOT)/lib/gcc/arm-eabi/4.4.0 ;
 
-NDK_MAIN_INC_DIR	=  $(NDKROOT)/build/platforms/android-4/arch-arm/usr/include ;
-NDK_SEC_INC_DIR		=  $(NDKROOT)/build/prebuilt/windows/arm-eabi-4.2.1/bin/platforms/android-4/arch-arm/usr/include ;
+NDK_MAIN_INC_DIR	=  $(NDKROOT)/platforms/$(NDK_PLATFORM)/arch-arm/usr/include ;
+NDK_SEC_INC_DIR		=  $(NDK_TOOLCHAIN_ROOT)/lib/gcc/arm-eabi/4.4.0/include ;
 
-NDK_WRAPPERS_BASE	?= $(NDKROOT)/ndk-wrappers ;
-NDK_WRAPPERS_STL	=  $(NDK_WRAPPERS_BASE)/stlport ;
+STL_PORT_BASE		?= $(NDKROOT)/sources/cxx-stl/stlport ;
+STL_PORT_INCLUDE	=  $(STL_PORT_BASE)/stlport ;
 
 ######################################################################################################################
 
@@ -31,30 +27,27 @@ COMPILE_FLAGS =
 	-march=armv5te 
 	-mtune=xscale 
 	-msoft-float 
-	-fpic 
 	-mthumb-interwork 
+	-mandroid 
+	-fpic 
 	-ffunction-sections 
+	-fdata-sections 
 	-funwind-tables 
 	-fstack-protector 
 	-fno-short-enums 
-	-mthumb 
+	-fomit-frame-pointer 
 	-fno-strict-aliasing 
-	-marm
-	-fno-omit-frame-pointer
-	-fsigned-char 
-	-finline-limit=64 
+	-funswitch-loops 
+	-finline-limit=300 
+	-fvisibility=hidden 
+	-w
+	-Wno-psabi 
+	-Wreturn-type 
 	-Wa,--noexecstack 
-	-Os
 	;
 	
 COMPILE_FLAGS_DEBUG =
-	-marm
-	-fno-omit-frame-pointer
 	-g
-	;
-	
-COMPILE_FLAGS_RELEASE =
-	-fomit-frame-pointer 
 	;
 
 ######################################################################################################################
@@ -66,16 +59,12 @@ C.CFlags * :
 C.CFlags * :
 	$(COMPILE_FLAGS_DEBUG)
 : debug ;
-	
-C.CFlags * :
-	$(COMPILE_FLAGS_RELEASE)
-: release ;
 
 ######################################################################################################################
-# NDK doesn't support RTTI or exceptions - Android build system adds these compile flags when building C++ code.
 
 C.C++Flags * : 
 	$(COMPILE_FLAGS)
+	-fvisibility-inlines-hidden
 	-fno-exceptions
 	-fno-rtti
 	;
@@ -91,14 +80,8 @@ C.Defines * :
 	__ARM_ARCH_5T__ 
 	__ARM_ARCH_5E__ 
 	__ARM_ARCH_5TE__ 
-	__NEW__ 
-	__SGI_STL_INTERNAL_PAIR_H 
 	ANDROID 
-	_ANDROID 
 	OS_ANDROID 
-	ANDROID_NDK 
-	DISABLE_IMPORTGL 
-	TCHAR=char 
 	;
 	
 C.Defines * : _DEBUG : debug ;
@@ -125,7 +108,7 @@ C.LinkDirectories * :
 
 ######################################################################################################################
 # TODO : Currently links against GLES, dl (for opening the GLES dynamic library) and log (for log messages), as well
-# as the real basics libc, libstdc++, libm, libgcc. Also links against stlport from Ndk Wrappers.
+# as the real basics libc, libstdc++, libm, libgcc. Also links against stlport.
 
 C.LinkPrebuiltLibraries * :
 	$(NDK_MAIN_LIB_DIR)/libc.so
@@ -135,7 +118,7 @@ C.LinkPrebuiltLibraries * :
 	$(NDK_MAIN_LIB_DIR)/libGLESv1_CM.so
 	$(NDK_MAIN_LIB_DIR)/libdl.so
 	$(NDK_MAIN_LIB_DIR)/liblog.so
-	$(NDK_WRAPPERS_STL)/build/lib/obj/arm-linux-gcc/so/libstlport.a
+	$(STL_PORT_BASE)/libs/$(NDK_ABI)/libstlport_static.a
 	
 	$(NDK_SEC_LIB_DIR)/libgcc.a
 	;
@@ -144,37 +127,31 @@ C.LinkPrebuiltLibraries * :
 
 C.IncludeDirectories * :
 	$(NDK_MAIN_INC_DIR) 
-	$(NDK_WRAPPERS_STL)/stlport 
+	$(STL_PORT_INCLUDE)
 	$(NDK_SEC_INC_DIR)
 	;
 
 ######################################################################################################################
 
-VSPLATFORMMAP.androidndk = "Android Ndk" ;
+VSPLATFORMMAP.androidndk = "Android NDK" ;
 
 ######################################################################################################################
 # Using custom C.Link as we need to specify the exectuable name as part of the flags, and using custom rules for
 # everything else as we need to do some cygwin setup first. Ideally we'd share the actions in g-gcc and just do our
 # cygwin setup first, but I'm not sure if that is possible to do right now.
 
-# Tell cygwin not to moan about DOS filenames, and put cygwin's bin folder on the path so it can find cygwin1.dll
-CYGWIN_SETUP = "SET CYGWIN=nodosfilewarning & SET PATH=%PATH%;%CYGWIN_PATH%\\bin" ;
-
 actions response C.Link
 {
-	$(CYGWIN_SETUP)
-	"$(C.LINK)" -Wl,-soname,$(<[1]:CBS) @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:T) $(LINKLIBS:TC)) -o $(<[1]:C) -Wl,-Map=$(<[1]:CS=.map)
+	"$(C.LINK)" -Wl,-soname,$(<[1]:CBS) @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:T) $(LINKLIBS)) -o $(<[1]:C)
 }
 
 actions updated together piecemeal response C.Archive
 {
-	$(CYGWIN_SETUP)
 	"$(C.AR)" @@($(LIBFLAGS) $(<:C) $(>:C))
 }
 
 actions together C.Ranlib
 {
-	$(CYGWIN_SETUP)
 	"$(C.RANLIB)" $(<:C)
 }
 
@@ -182,51 +159,23 @@ if $(NOARUPDATE)
 {
 	actions response C.Archive
 	{
-		$(CYGWIN_SETUP)
 		"$(C.AR)" @@($(LIBFLAGS) $(<:C)) $(>:C)
 	}
 }
 
 actions updated response C.CC
 {
-	$(CYGWIN_SETUP)
-	CD /D $(<[0]:D\\C)
 	"$(C.CC)" @@(-c $(MFLAGS)) $(>:C)
 }
 
 actions updated response C.C++
 {
-	$(CYGWIN_SETUP)
-	CD /D $(<[0]:D\\C)
 	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
 }
 
 actions updated response C.PCH
 {
-	$(CYGWIN_SETUP)
 	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
 }
 
 ######################################################################################################################
-
-rule C._ApplicationFromObjects_PostBuild_Platform
-{
-	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
-	local grist = $(TARGET) ;
-	local _s = $(OBJECTS:G=$(grist)) ;
-	local _t = [ C._retrieveOutputName $(TARGET) : SUFEXE ] ;
-	_t = $(_t:G=$(grist)) ;
-	
-	# Create stripped .so
-	local _strippedLib = $(_t).stripped ;
-	MakeLocate $(_strippedLib) : $(outputPath) ;
-	Depends $(TARGET) : $(_strippedLib) : $(_t) ;
-	Clean clean:$(TARGET) : $(_strippedLib) ;
-	C.Strip $(_strippedLib) : $(_t) ;
-}
-
-actions C.Strip
-{
-	$(CYGWIN_SETUP)
-	$(C.STRIP) -g -S -d -o $(1) $(2)
-}

@@ -160,28 +160,18 @@ rule C.AddBuildExtensions TYPE : EXTS : RULE : SUFOBJ : ADD_TO_EXTENSIONS : ADD_
 
 rule C._MultiCppCompile_ObjName_Pass1_OutputAsTree
 {
-	if $(sufobj[1]) {
-		_obj = $(_src:S=$(sufobj[1]))$(sufobj[2]) ;
-	} else {
-		_obj = $(_src)$(sufobj[2]) ;
-	}
-	_obj = [ Subst $(_obj) : %.%. : __ ] ;
-	_obj = [ Subst $(_obj) : \: : -- ] ;
-	local _objdir = $(_obj:DR=$(LOCATE_TARGET)) ;
+	local outputAsTree_obj = [ Subst $(_obj) : %.%. : __ ] ;
+	outputAsTree_obj = [ Subst $(outputAsTree_obj) : \: : -- ] ;
+	local _objdir = $(outputAsTree_obj:DR=$(LOCATE_TARGET)) ;
 	MakeLocate $(_obj) : $(_objdir) ;
-	BINDING on $(_obj) = $(_obj:BS) ;
 	_postmflags = "/c \"/Fo$(_objdir:\\)\\\\\" \"/Fd$(_VCPDB:T)\"" ;
 }
 
 
 rule C._MultiCppCompile_ObjName_Pass1
 {
-	if $(sufobj[1]) {
-		_obj = $(_src:S=$(sufobj[1]):D=)$(sufobj[2]) ;
-	} else {
-		_obj = $(_src)$(sufobj[2]) ;
-	}
-	MakeLocate $(_obj) : $(LOCATE_TARGET) ;
+	LOCATE on $(_obj) = $(LOCATE_TARGET) ;
+	Depends $(_obj) : $(LOCATE_TARGET[1]:G=!dir!) ;
 }
 
 
@@ -228,7 +218,7 @@ rule C.MultiCppCompile TARGET : SOURCES
 		postHDRS += $(HDRS.$(INCLUDES_ALL_TYPES)) ;
 		if $(MSVCNT) {
 			local flags = /I /AI ;
-			postREFERENCEDIRECTORIES += $(flags)\"$(REFERENCEDIRECTORIES.$(INCLUDES_ALL_TYPES))\" ;
+			postREFERENCEDIRECTORIES += $(flags)\"$(REFERENCEDIRECTORIES.$(INCLUDES_ALL_TYPES))\" ; #"
 		}
 		preDEFINES += $(DEFINES.$(FLAGS_ALL_TYPES)) ;
 		preCCFLAGS += $(CCFLAGS.$(FLAGS_ALL_TYPES)) ;
@@ -244,7 +234,7 @@ rule C.MultiCppCompile TARGET : SOURCES
 		postHDRS = $(HDRS.$(INCLUDES_ALL_TYPES)) $(postHDRS) ;
 		if $(MSVCNT) {
 			local flags = /I /AI ;
-			postREFERENCEDIRECTORIES = $(flags)\"$(REFERENCEDIRECTORIES.$(INCLUDES_ALL_TYPES))\" $(postREFERENCEDIRECTORIES) ;
+			postREFERENCEDIRECTORIES = $(flags)\"$(REFERENCEDIRECTORIES.$(INCLUDES_ALL_TYPES))\" $(postREFERENCEDIRECTORIES) ; #"
 		}
 		preDEFINES += $(DEFINES.$(FLAGS_ALL_TYPES)) ;
 		preCCFLAGS += $(CCFLAGS.$(FLAGS_ALL_TYPES)) ;
@@ -282,6 +272,8 @@ rule C.MultiCppCompile TARGET : SOURCES
 		makeobj_pass1 = C._MultiCppCompile_ObjName_Pass1_OutputAsTree ;
 	} else {
 		makeobj_pass1 = C._MultiCppCompile_ObjName_Pass1 ;
+
+		MkDir $(LOCATE_TARGET[1]:G=!dir!) ;
 	}
 
 	local FIncludes_dot = [ C.FIncludes . ] ;
@@ -313,6 +305,13 @@ rule C.MultiCppCompile TARGET : SOURCES
 		local sufobj = $($(BUILD_EXT).SUFOBJ) ;
 
 		local _obj ;
+		if $(sufobj[1]) {
+			_obj = $(_src:S=$(sufobj[1]))$(sufobj[2]) ;
+		} else {
+			_obj = $(_src)$(sufobj[2]) ;
+		}
+		BINDING on $(_obj) = $(_obj:BS) ;
+
 		$(makeobj_pass1) ;
 
 		local _hdrs = $(SEARCH_SOURCE) ;
@@ -320,11 +319,15 @@ rule C.MultiCppCompile TARGET : SOURCES
 
 		local objflags ;
 		local objdefines ;
+		local objectFlagsToRemove ;
+		local objectFlagsToAdd ;
 		on $(_obj) {
 			_hdrs += $(HDRS.$(INCLUDES_ALL_TYPES)) ;
 			objectForceIncludes += $(FORCE_INCLUDES) ;
 			objflags = $($($(BUILD_EXT).FLAGS).$(FLAGS_ALL_TYPES)) ;
 			objdefines = $(DEFINES.$(FLAGS_ALL_TYPES)) ;
+			objectFlagsToRemove = $(FLAGS_TO_REMOVE.$(FLAGS_ALL_TYPES)) ;
+			objectFlagsToAdd = $(FLAGS_TO_ADD.$(FLAGS_ALL_TYPES)) ;
 		}
 		_hdrs += $(postHDRS) $(C.STDHDRS) ;
 
@@ -356,12 +359,17 @@ rule C.MultiCppCompile TARGET : SOURCES
 		}
 
 		# now that general flags on the file are determined
-
 		if $(flagsToRemove[1]) {
 			_flags -= $(flagsToRemove) ;
 		}
 		if $(flagsToAdd[1]) {
 			_flags += $(flagsToAdd) ;
+		}
+		if $(objectFlagsToRemove[1]) {
+			_flags -= $(objectFlagsToRemove) ;
+		}
+		if $(objectFlagsToAdd[1]) {
+			_flags += $(objectFlagsToAdd) ;
 		}
 
 		C._MultiCppCompile_SetupFlags ;
@@ -401,20 +409,10 @@ rule C.MultiCppCompile TARGET : SOURCES
 
 		# start with empty lists of objects for this batch
 		local objects ;
-		if $(__MultiCppCompile_OutputAsTree) != 0 {
-			if $(sufobj[1]) {
-				objects = $(_sources:S=$(sufobj[1]))$(sufobj[2]) ;
-			} else {
-				objects = $(_sources)$(sufobj[2]) ;
-			}
-			objects = [ Subst $(objects) : %.%. : __ ] ;
-			objects = [ Subst $(objects) : \: : -- ] ;
+		if $(sufobj[1]) {
+			objects = $(_sources:S=$(sufobj[1]))$(sufobj[2]) ;
 		} else {
-			if $(sufobj[1]) {
-				objects = $(_sources:S=$(sufobj[1]):D=)$(sufobj[2]) ;
-			} else {
-				objects = $(_sources)$(sufobj[2]) ;
-			}
+			objects = $(_sources)$(sufobj[2]) ;
 		}
 
 		if $(addToLink) = 1 {
@@ -1375,6 +1373,17 @@ rule C.IncludeDirectories TARGET : INCLUDEPATHS : THE_CONFIG : THE_PLATFORM
 }
 
 
+rule C.ObjectAddFlags TARGET : SOURCES : FLAGS : THE_CONFIG : THE_PLATFORM
+{
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	local grist = $(TARGET) ;
+	SOURCES = [ C._FilterSourcesForCompilableOnly ] ;
+	local objTargets = $(SOURCES:S=$(SUFOBJ)) ;
+	FLAGS_TO_ADD.$(THE_PLATFORM:E=*).$(THE_CONFIG:E=*) on $(objTargets) += $(FLAGS) ;
+	FLAGS_TO_REMOVE.$(THE_PLATFORM:E=*).$(THE_CONFIG:E=*) on $(objTargets) -= $(FLAGS) ;
+}
+
+
 rule C.ObjectDefines TARGET : SOURCES : DEFINES : THE_CONFIG : THE_PLATFORM
 {
 	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
@@ -1395,14 +1404,36 @@ rule C.ObjectForceInclude TARGET : SOURCES : INCLUDES : THE_CONFIG : THE_PLATFOR
 }
 
 
+rule C._FilterSourcesForCompilableOnly
+{
+	# for each file
+	local dollar = $ ;
+	local colon = ":" ;
+	local listIncludes = @(I=\\$(C.BUILD_EXTENSIONS)$:J=$(colon)) ;
+	local sources = @($(dollar)(SOURCES$(colon)$(listIncludes)):A:G=$(grist)) ;
+	return $(sources) ;
+}
+
 rule C.ObjectIncludeDirectories TARGET : SOURCES : INCLUDEPATHS : THE_CONFIG : THE_PLATFORM
 {
 	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
 	local grist = $(TARGET) ;
 	THE_CONFIG ?= * ;
 	THE_PLATFORM ?= * ;
-	local objTargets = $(SOURCES:S=$(SUFOBJ):G=$(grist)) ;
+	SOURCES = [ C._FilterSourcesForCompilableOnly ] ;
+	local objTargets = $(SOURCES:S=$(SUFOBJ)) ;
 	HDRS.$(THE_PLATFORM).$(THE_CONFIG) on $(objTargets) += $(INCLUDEPATHS:R=$(SUBDIR:E="")) ;
+}
+
+
+rule C.ObjectRemoveFlags TARGET : SOURCES : FLAGS : THE_CONFIG : THE_PLATFORM
+{
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	local grist = $(TARGET) ;
+	SOURCES = [ C._FilterSourcesForCompilableOnly ] ;
+	local objTargets = $(SOURCES:S=$(SUFOBJ)) ;
+	FLAGS_TO_ADD.$(THE_PLATFORM:E=*).$(THE_CONFIG:E=*) on $(objTargets) -= $(FLAGS) ;
+	FLAGS_TO_REMOVE.$(THE_PLATFORM:E=*).$(THE_CONFIG:E=*) on $(objTargets) += $(FLAGS) ;
 }
 
 

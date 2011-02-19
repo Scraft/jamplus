@@ -5,6 +5,7 @@ switch $(COMPILER.$(PLATFORM)) {
 		MSSDK ?= $(MSVCNT) ;
 		MSSDK_STDHDRS = "$(MSVCNT)/include" "$(MSSDK)/Include" ;
 		MSSDK_LINKDIRECTORIES = "$(MSVCNT)/lib" "$(MSSDK)/Lib" ;
+		C.RC-NOLOGO = /nologo ;
 
 	case vs2008 :
 		local key = HKEY_LOCAL_MACHINE SOFTWARE Microsoft "Microsoft SDKs" Windows CurrentInstallFolder ;
@@ -49,12 +50,6 @@ if $(COMPILER.$(PLATFORM)) = vc6 {
 }
 C.STDHDRS		?= "$(MSSDK_STDHDRS)" ;
 C.STDLINKDIRECTORIES ?= "$(MSSDK_LINKDIRECTORIES)" ;
-
-C.Defines * : WIN32 WINDOWS : * : win32 ;
-
-if $(COMPILER.$(PLATFORM)) != vc6 {
-	C.Defines * : _CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE : * : win32 ;
-}
 
 VSPLATFORMMAP.win32 = Win32 ;
 VSNATIVEPLATFORM.win32 = 1 ;
