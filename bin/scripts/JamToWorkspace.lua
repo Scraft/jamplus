@@ -677,24 +677,48 @@ include "$(settingsFile)" ;
 			jambaseText[#jambaseText + 1] = ' ;\n'
 		end
 
-		jambaseText[#jambaseText + 1] = "JAM_MODULES_USER_PATH += \"" .. sourceRootPath .. "\" ;\n"
-
 		if opts.compiler or Config.Compiler then
 			Config.Compiler = Config.Compiler or opts.compiler
 			jambaseText[#jambaseText + 1] = "COMPILER = \"" .. Config.Compiler .. "\" ;\n"
 		end
 
+		local variablesTable = {
+			sourceRootPath = sourceRootPath,
+			destinationRootPath = destinationRootPath,
+		}
+
 		-- Write the Jambase variables out.
-		if Config.JambaseVariables then
+		if type(Config.JambaseVariables) == 'table' then
 			for _, variable in ipairs(Config.JambaseVariables) do
-				jambaseText[#jambaseText + 1] = variable[1] .. ' = "' .. expand(tostring(variable[2])) .. '" ;\n'
+				jambaseText[#jambaseText + 1] = variable[1] .. ' = "' .. expand(tostring(variable[2]), variablesTable) .. '" ;\n'
 			end
 			jambaseText[#jambaseText + 1] = '\n'
+		end
+
+		if type(Config.JambaseText) == 'string' then
+			jambaseText[#jambaseText + 1] = '{\n'
+			for key, value in pairs(variablesTable) do
+				jambaseText[#jambaseText + 1] = '\tlocal ' .. key .. ' = "' .. value .. '" ;\n'
+			end
+			jambaseText[#jambaseText + 1] = Config.JambaseText
+			jambaseText[#jambaseText + 1] = '\n}\n'
 		end
 
 		for _, info in ipairs(Config.JamFlags) do
 			jambaseText[#jambaseText + 1] = expand(info.Key .. ' = ' .. info.Value .. ' ;\n', exporter.Options, _G)
 		end
+
+		-- Write the Jambase variables out.
+		if type(Config.JamModulesUserPath) == 'table' then
+			for _, path in ipairs(Config.JamModulesUserPath) do
+				jambaseText[#jambaseText + 1] = 'JAM_MODULES_USER_PATH += "' .. expand(path, variablesTable) .. '" ;\n'
+			end
+		elseif type(Config.JamModulesUserPath) == 'string' then
+			jambaseText[#jambaseText + 1] = 'JAM_MODULES_USER_PATH += "' .. expand(Config.JamModulesUserPath, variablesTable) .. '" ;\n'
+		end
+
+		jambaseText[#jambaseText + 1] = "JAM_MODULES_USER_PATH += \"" .. sourceRootPath .. "\" ;\n"
+
 		jambaseText[#jambaseText + 1] = expand([[
 
 include $(jamPath)Jambase.jam ;
