@@ -20,7 +20,7 @@ if ! $(TARGETINFO_LOCATE) {
 
 rule C.FDefines { return /D$(<) ; }
 rule C.FIncludes { return /I"\"$(<)\"" ; }
-rule C.FLibraryPaths { return \"/LIBPATH:$(<)\" ; }
+rule C.FLibraryPaths { return \"/LIBPATH:$(<)\" ; } #"
 
 
 rule C._C++Exceptions
@@ -103,7 +103,7 @@ if $(COMPILER.$(PLATFORM)) in vc6 vs2002 vs2003
 
 actions response C.Link
 {
-	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
+	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH:J=;);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
 	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) $(LINKLIBS:CT)) /out:$(<[1])
 }
@@ -112,7 +112,7 @@ actions response C.Link
 
 actions response C.Link
 {
-	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
+	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH:J=;);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
 	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT) /MAP) /out:$(<[1]:C\\)
 }
@@ -125,13 +125,13 @@ actions response C.DebugLinkWithManifest
 	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT)) /out:$(<[1]:C\\)
 	if exist $(MANIFEST).intermediate.manifest "$(C.MT:\\)" -nologo -notify_update -manifest $(MANIFEST).intermediate.manifest -out:$(MANIFEST).embed.manifest &
 	if "%ERRORLEVEL%" == "1090650113" echo $(MANIFEST_TYPE) 24 "$(MANIFEST).embed.manifest" > "$(MANIFEST).embed.rc" &
-	"$(C.RC:\\)" /fo $(MANIFEST).embed.res $(MANIFEST).embed.rc &
+	"$(C.RC:\\)" $(C.RC-NOLOGO) /fo $(MANIFEST).embed.res $(MANIFEST).embed.rc &
 	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT) /MAP) /out:$(<[1]:C\\)
 }
 
 actions response C.LinkWithManifest
 {
-	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH);$(LINK_PATHS:E);%PATH%
+	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH:J=;);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
 	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT) /MAP) /out:$(<[1]:C\\)
 	"$(C.MT:\\)" -nologo -manifest $(MANIFEST).intermediate.manifest -outputresource:$(<[1]);$(MANIFEST_TYPE)
@@ -142,7 +142,7 @@ actions response C.LinkWithManifest
 
 actions updated response C.CC
 {
-	PATH=$(MSVCNT_BIN_PATH);%PATH%
+	PATH=$(MSVCNT_BIN_PATH:J=;);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
 	$(C.CC:\\C) /nologo @@($(MFLAGS)) $(>:C)
 }
@@ -150,7 +150,7 @@ actions updated response C.CC
 
 actions updated response C.C++
 {
-	PATH=$(MSVCNT_BIN_PATH);%PATH%
+	PATH=$(MSVCNT_BIN_PATH:J=;);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
 	$(C.C++:\\C) /nologo @@($(MFLAGS)) $(>:C)
 }
@@ -158,7 +158,7 @@ actions updated response C.C++
 
 actions together response C.Archive
 {
-	PATH=$(MSVCNT_BIN_PATH);%PATH%
+	PATH=$(MSVCNT_BIN_PATH:J=;);%PATH%
 	$(C.AR:C) /nologo $(LIBFLAGS) @@($(>:\\C)) /out:$(<:C)
 }
 
@@ -239,6 +239,11 @@ rule C.DefFile TARGET : SOURCES
 }
 
 
+actions existing quietly DeletePCHFile
+{
+$(RM) $(>:\\C)
+}
+
 rule C._MultiCppCompile_PreCompile
 {
 	if ! $(PLATFORM) in win32 win64 {
@@ -277,13 +282,14 @@ rule C._MultiCppCompile_SetupFlags
 		# add extra flags to enable pch creation
 		local _pchFilename = $(_pch[3]:LBS).pch ;
 		local _pchDiskFilename = [ FDirName $(LOCATE_TARGET) $(_pchFilename:BS) ] ;
-		_flags += /Fp\"$(_pchDiskFilename:\\)\" /Yc\"$(_pch[2])\" ;
+		_flags += /Fp\"$(_pchDiskFilename:\\)\" /Yc\"$(_pch[2])\" /Yl\"__jp__$(TARGET)\" ;
 		# mark that it will be created by compilation through srcref
 		_pchFilename = $(_pchFilename:G=$(grist)) ;
 		BINDING on $(_pchFilename) = $(_pchFilename:BS) ;
 		MakeLocate $(_pchFilename) : $(LOCATE_TARGET) ;
 		Depends $(_pchFilename) : $(_src) ;
 		Clean clean:$(TARGET) : $(_pchFilename) ;
+		DeletePCHFile $(_pchFilename) : $(_pchFilename) ;
 
 	# if the source should use pch
 	} else if $(_pch[2]) && ! $(_nopch) {
@@ -473,3 +479,7 @@ C.AddBuildExtensions C++ : .cc .cpp .cxx : C.C++ : $(SUFOBJ) "" : 1 0 1 : 1 ;
 
 C.CFlags * : /TC : * : * ;
 C.C++Flags * : /TP : * : * ;
+
+if $(COMPILER.$(PLATFORM)) != vc6 {
+	IncludeModule c-compilers/c-vc-crt-defines ;
+}

@@ -1,4 +1,6 @@
 {
+	COMPILER.$(PLATFORM) = gcc ;
+
 	SUFEXE	?= "" ;
 	SUFLIB	?= .a ;
 	SUFMODULE ?= .so ;
@@ -33,8 +35,6 @@
 			C.RANLIB	?= "" ;
 			SUFEXE		= .exe ;
 	}
-	
-	COMPILER.$(PLATFORM) = gcc ;
 }
 
 if ! $(TARGETINFO_LOCATE) {

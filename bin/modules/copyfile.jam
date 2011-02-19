@@ -18,7 +18,6 @@ if $(NT)
 {
 	actions CopyFile1
 	{
-		ECHO @ Copying : "$(2:BS\\)" to "$(1:\\)"
 		$(CP) "$(2:\\)" "$(1:\\)"
 	}
 }
