@@ -645,11 +645,19 @@ actions piecemeal together existing removeemptydirs Clean
 	$(RM) $(>:C)
 }
 
+actions piecemeal together existing removeemptydirs CleanTree {
+	$(RM) -rf "$(2:\\)"
+}
+
 if $(NT)
 {
 	actions piecemeal together existing removeemptydirs Clean
 	{
 	$(RM) $(>:\\C)
+	}
+
+	actions piecemeal together existing removeemptydirs CleanTree {
+		rd /q /s "$(2:\\)"
 	}
 }
 
@@ -678,27 +686,6 @@ if $(NT)
 	$(RM) $(>:\\C)
 	}
 }
-
-#
-# NT specific actions
-#
-
-if $(NT) && $(MSVCNT)
-{
-	actions piecemeal together existing removeemptydirs Clean
-	{
-		$(RM) $(>:\\C)
-	}
-}
-
-if $(WIN98)
-{
-    actions existing removeemptydirs Clean
-    {
-	del $(>:\\C)
-    }
-}
-
 
 ########################################################################
 ########################################################################

@@ -516,7 +516,8 @@ function DumpWorkspace(workspace)
 	Projects[updateWorkspaceName] = {}
 	Projects[updateWorkspaceName].Sources =
 	{
-		jamPath:gsub('\\', '/') .. '/Jambase.jam'
+		jamPath:gsub('\\', '/') .. '/Jambase.jam',
+		os.path.combine(destinationRootPath, 'customsettings.jam'),
 	}
 	Projects[updateWorkspaceName].SourcesTree = Projects[updateWorkspaceName].Sources
 	Projects[updateWorkspaceName].Name = updateWorkspaceName
@@ -679,7 +680,7 @@ include "$(settingsFile)" ;
 
 		if opts.compiler or Config.Compiler then
 			Config.Compiler = Config.Compiler or opts.compiler
-			jambaseText[#jambaseText + 1] = "COMPILER = \"" .. Config.Compiler .. "\" ;\n"
+			jambaseText[#jambaseText + 1] = "COMPILER ?= \"" .. Config.Compiler .. "\" ;\n"
 		end
 
 		local variablesTable = {

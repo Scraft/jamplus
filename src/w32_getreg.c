@@ -136,9 +136,10 @@ w32_getreg_internal(LIST* pathlist, INT is64Bit)
 const char*
 w32_getreg(LIST* pathlist)
 {
-	return w32_getreg_internal( pathlist, 0 );
+	const char* ret = w32_getreg_internal( pathlist, 0); 
+	if (ret == 0) ret = w32_getreg_internal( pathlist, 1);
+	return ret;
 }
-
 
 #ifdef OPT_BUILTIN_W32_GETREG64_EXT
 const char*
