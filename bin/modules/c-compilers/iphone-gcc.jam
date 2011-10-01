@@ -3,6 +3,7 @@ C.CC			?= gcc ;
 C.C++			?= g++ ;
 C.LINK			?= g++ ;
 C.RANLIB		?= ranlib ;
+C.STRIP			?= strip ;
 
 SUFMODULE	= .dylib ;
 
@@ -17,6 +18,13 @@ rule C.LinkFrameworks TARGET : FRAMEWORKS : THE_CONFIG : THE_PLATFORM
 	C.LinkFlags $(TARGET) : "-framework $(FRAMEWORKS)" : $(THE_CONFIG) : $(THE_PLATFORM) ;
 }
 
+rule C.WeakLinkFrameworks TARGET : FRAMEWORKS : THE_CONFIG : THE_PLATFORM
+{
+	C.LinkFlags $(TARGET) : "-weak_framework $(FRAMEWORKS)" : $(THE_CONFIG) : $(THE_PLATFORM) ;
+}
+
+# Only want to apply wild card rules from C.MacOSX_SDK once...
+C.MacOSX_SDK.CalledYet = false ;
 
 rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 	if ! ( $(PLATFORM) in macosx32 macosx64 iphonesimulator iphone ipadsimulator ipad ) { return ; }
@@ -29,10 +37,13 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 	local developerRoot ;
 	local isysroot ;
 	local flags ;
+	local c++flags ;
+	local ldflags ;
 	local defaultversionmin ;
 	switch $(SDK_PLATFORM) {
 		case macosx :
 			developerRoot = /Developer/SDKs ;
+			C.STRIP = /Developer/usr/bin/strip ;
 			SDK_VERSION ?= 10.5 ;
 			switch $(SDK_VERSION) {
 				case 10.4 :
@@ -75,6 +86,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 
 		case iphone :
 			developerRoot = /Developer/Platforms/iPhoneOS.platform/Developer ;
+			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
 			SDK_VERSION ?= 4.3 ;
 			switch $(SDK_VERSION) {
 				case 2.0 :
@@ -102,56 +114,63 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS3.1.2.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=3.1.2 ;
+					flags += -arch armv6 -mno-thumb ;
 					XCODE_SDKROOT = iphoneos3.1.2 ;
+					SDK_VERSION_MIN ?= 3.1.2 ;
 
 				case 3.1.3 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS3.1.3.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=3.1.3 ;
+					flags += -arch armv6 -mno-thumb ;
 					XCODE_SDKROOT = iphoneos3.1.3 ;
+					SDK_VERSION_MIN ?= 3.1.3 ;
 
 				case 3.2 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS3.2.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=3.2 ;
+					flags += -arch armv6 -mno-thumb ;
 					XCODE_SDKROOT = iphoneos3.2 ;
+					SDK_VERSION_MIN ?= 3.2 ;
 
 				case 4.0 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.0.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=4.0 ;
+					flags += -arch armv6 -mno-thumb ;
 					XCODE_SDKROOT = iphoneos4.0 ;
+					SDK_VERSION_MIN ?= 4.0 ;
 
 				case 4.1 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.1.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=4.1 ;
+					flags += -arch armv6 -mno-thumb ;
 					XCODE_SDKROOT = iphoneos4.1 ;
+					SDK_VERSION_MIN ?= 4.1 ;
 
 				case 4.2 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.2.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=4.2 ;
+					flags += -arch armv6 -mno-thumb ;
 					XCODE_SDKROOT = iphoneos4.2 ;
+					SDK_VERSION_MIN ?= 4.2 ;
 
 				case 4.3 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.3.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=4.3 ;
+					flags += -arch armv6 -mno-thumb ;
 					XCODE_SDKROOT = iphoneos4.3 ;
+					SDK_VERSION_MIN ?= 4.3 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
@@ -160,6 +179,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 
 		case iphonesimulator :
 			developerRoot = /Developer/Platforms/iPhoneSimulator.platform/Developer ;
+			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
 			SDK_VERSION ?= 4.3 ;
 			switch $(SDK_VERSION) {
 				case 2.0 :
@@ -265,6 +285,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 
 		case ipadsimulator :
 			developerRoot = /Developer/Platforms/iPhoneSimulator.platform/Developer ;
+			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
 			SDK_VERSION ?= 4.3 ;
 			SDK_VERSION_MIN ?= 4.3 ;
 			switch $(SDK_VERSION) {
@@ -311,6 +332,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 
 		case ipad :
 			developerRoot = /Developer/Platforms/iPhoneOS.platform/Developer ;
+			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
 			SDK_VERSION ?= 4.3 ;
 			SDK_VERSION_MIN ?= 4.3 ;
 			switch $(SDK_VERSION) {
@@ -319,7 +341,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS3.2.sdk ;
-					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 ; 
+					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 -mno-thumb ; 
 					XCODE_SDKROOT = iphoneos3.2 ;
 
 				case 4.0 :
@@ -327,7 +349,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.0.sdk ;
-					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 ; 
+					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 -mno-thumb ; 
 					XCODE_SDKROOT = iphoneos4.0 ;
 
 				case 4.2 :
@@ -335,7 +357,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.2.sdk ;
-					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 ; 
+					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 -mno-thumb ; 
 					XCODE_SDKROOT = iphoneos4.2 ;
 
 				case 4.3 :
@@ -343,8 +365,14 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C.C++	= $(developerRoot)/usr/bin/g++-4.2 ;
 					C.LINK	= $(developerRoot)/usr/bin/g++-4.2 ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.3.sdk ;
-					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 ; 
+					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=30200 -arch armv7 -mno-thumb ; 
 					XCODE_SDKROOT = iphoneos4.3 ;
+					DT_COMPILER = 4.2 ;
+					DT_PLATFORM_BUILD = 8F190 ;
+					DT_PLATFORM_VERSION = 4.3 ;
+					DT_SDK_BUILD = 8F190 ;
+					DT_XCODE = 0400 ;
+					DT_XCODE_BUILD = 10M2518 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
@@ -356,13 +384,23 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 	IPHONEOS_SDK_VERSION = $(SDK_VERSION) ;
 	IOS_SDK_VERSION_MIN = $(SDK_VERSION_MIN) ;
 
+	flags += -fmessage-length=0 -pipe ;
 	flags += -fvisibility=hidden -gdwarf-2 ;
+	c++flags = "" ;
+	c++flags += -fvisibility-inlines-hidden ;
+	ldflags = "" ;
+	ldflags += -dead_strip -all_load -ObjC ;
+
+	if $(C.MacOSX_SDK.CalledYet) = false
+	{
+		C.MacOSX_SDK.CalledYet = true ;
 
 	C.Flags CC	: * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
-	C.Flags C++	: * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+		C.Flags C++	: * : -isysroot $(isysroot) $(flags) $(c++flags) : : $(PLATFORM) ;
 	C.Flags M	: * : -isysroot $(isysroot) $(flags) -fobjc-abi-version=2 -fobjc-legacy-dispatch : : $(PLATFORM) ;
 	C.Flags MM	: * : -isysroot $(isysroot) $(flags) -fobjc-abi-version=2 -fobjc-legacy-dispatch : : $(PLATFORM) ;
-	C.LinkFlags * : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+		C.LinkFlags * : -isysroot $(isysroot) $(flags) $(ldflags) : : $(PLATFORM) ;
+	}
 
 	if $(TARGETINFO_LOCATE) {
 		Contents += "Projects[ [[$(TARGET)]] ].XCODE_SDKROOT[ [[$(PLATFORM)]] ][ [[$(CONFIG)]] ] = [[$(XCODE_SDKROOT)]]
@@ -417,7 +455,7 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 			case macosx64 :			VALUE = "" ;
 			case iphone :
 				C._BundleInfoBoolean LSRequiresIPhoneOS : true ;
-				C._BundleInfoArray UIDeviceFamily : 1 ;
+#				C._BundleInfoArray UIDeviceFamily : 1 ;
 				C._BundleInfoString DTPlatformName : iphoneos ;
 				C._BundleInfoString DTSDKName : iphoneos$(IPHONEOS_SDK_VERSION) ;
 				C._BundleInfoArray CFBundleSupportedPlatforms : iPhoneOS ;
@@ -425,7 +463,7 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 
 			case iphonesimulator :
 				C._BundleInfoBoolean LSRequiresIPhoneOS : true ;
-				C._BundleInfoArray UIDeviceFamily : 1 ;
+#				C._BundleInfoArray UIDeviceFamily : 1 ;
 				C._BundleInfoString DTPlatformName : iphonesimulator ;
 				C._BundleInfoString DTSDKName : iphonesimulator$(IPHONEOS_SDK_VERSION) ;
 				C._BundleInfoArray CFBundleSupportedPlatforms : iPhoneSimulator ;
@@ -449,9 +487,30 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 		}
 	}
 
+	# This stuff seems to be required for submitting with 4.3 of the SDK at least (on IPad).
+	if $(DT_COMPILER) && $(DT_COMPILER) != "" {
+		C._BundleInfoString DTCompiler : $(DT_COMPILER) ;
+	}
+	if $(DT_PLATFORM_BUILD) && $(DT_PLATFORM_BUILD) != "" {
+		C._BundleInfoString DTPlatformBuild : $(DT_PLATFORM_BUILD) ;
+	}
+	if $(DT_PLATFORM_VERSION) && $(DT_PLATFORM_VERSION) != "" {
+		C._BundleInfoString DTPlatformVersion : $(DT_PLATFORM_VERSION) ;
+	}
+	if $(DT_SDK_BUILD) && $(DT_SDK_BUILD) != "" {
+		C._BundleInfoString DTSDKBuild : $(DT_SDK_BUILD) ;
+	}
+	if $(DT_XCODE) && $(DT_XCODE) != "" {
+		C._BundleInfoString DTXcode : $(DT_XCODE) ;
+	}
+	if $(DT_XCODE_BUILD) && $(DT_XCODE_BUILD) != "" {
+		C._BundleInfoString DTXcodeBuild : $(DT_XCODE_BUILD) ;
+	}
+
 	switch $(TYPE:L) {
 		case info :					C._BundleInfoString CFBundleGetInfoString : $(VALUE) ;
 		case iconfile :				C._BundleInfoString CFBundleIconFile : $(VALUE) ;
+		case iconfiles :			C._BundleInfoArray CFBundleIconFiles : $(VALUE) ;
 		case longversion :			C._BundleInfoString CFBundleLongVersionString : $(VALUE) ;
 		case bundlename :
 			C._BundleInfoString CFBundleName : $(VALUE) ;
@@ -474,7 +533,21 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 		case supportedplatforms :   C._BundleInfoArray CFBundleSupportedPlatforms : $(VALUE) ;
 		case minimumosversion :		C._BundleInfoString MinimumOSVersion : $(VALUE) ;
 		case uidevicefamily :		C._BundleInfoArray UIDeviceFamily : $(VALUE) ;
+		case uiprerenderedicon :	C._BundleInfoBoolean UIPrerenderedIcon : $(VALUE) ;
 		case uistatusbarhidden :	C._BundleInfoBoolean UIStatusBarHidden : $(VALUE) ;
+		case uiinterfaceorientation :	
+			if $(VALUE) = portrait {
+				C._BundleInfoString UIInterfaceOrientation : UIInterfaceOrientationPortrait ;
+			}
+			if $(VALUE) = portraitupsidedown {
+				C._BundleInfoString UIInterfaceOrientation : UIInterfaceOrientationPortraitUpsideDown ;
+			}
+			if $(VALUE) = landscapeleft {
+				C._BundleInfoString UIInterfaceOrientation : UIInterfaceOrientationLandscapeLeft ;
+			}
+			if $(VALUE) = landscaperight {
+				C._BundleInfoString UIInterfaceOrientation : UIInterfaceOrientationLandscapeRight ;
+			}
 		case uisupportedinterfaceorientations :
 			local values = ;
 			if portrait in $(VALUE) {
@@ -493,6 +566,10 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 	}
 }
 
+actions C.Strip
+{
+	$(C.STRIP) $(2:CT) -o $(1:CT)
+}
 
 rule C._ApplicationFromObjects_LinkFlags
 {
@@ -500,7 +577,9 @@ rule C._ApplicationFromObjects_LinkFlags
 		local outputName = [ C._retrieveOutputName $(TARGET) ] ;
 		local bundlePath = $(outputPath)/$(outputName).app ;
 		BUNDLE_PATH on $(TARGET) = $(bundlePath) ;
-		MakeLocate $(_linkTargets) : $(bundlePath) ;
+		bundleExe = [ C.TargetGrist $(TARGET)|bundle : $(_linkTargets) ] ;
+		MakeLocate $(bundleExe) : $(bundlePath) ;
+		BUNDLE_EXE on $(TARGET) = $(bundleExe) ;
 
 		local bundleTarget = $(TARGET):bundle ;
 		local cleanBundleTarget = clean:$(bundleTarget) ;
@@ -556,6 +635,15 @@ actions ProcessEntitlements
 	sed -i "" -e "s/$(C.__DOLLAR)(CFBundleIdentifier)/$(CFBundleIdentifier:E=*needs-CFBundleIdenfier*)/g" -e "s/$(C.__DOLLAR)(AppIdentifierPrefix)/$(AppIdentifierPrefix:E=*needs-AppIdentifierPrefix*)./g" -e "s/<key>keychain-access-groups/$(GET_TASK_ALLOW:E="")<key>keychain-access-groups/g" $(1)
 }
 
+rule C.SetTaskAllow TARGET : VALUE
+{
+	# If true/false isn't specific, assume true, as 'setting' could be thought of enabling.
+	VALUE ?= true ;
+
+	# Save value passed, we'll later check both C.$(TARGET) and C.* so we can have config defaults and support overrides.
+	C.$(TARGET).GET_TASK_ALLOW = $(VALUE) ;
+}
+
 rule C._ApplicationFromObjects_PostBuild
 {
 	if bundle in $(OPTIONS) {
@@ -563,6 +651,7 @@ rule C._ApplicationFromObjects_PostBuild
 		local bundleTarget ;
 		local cleanBundleTarget ;
 		local isysroot ;
+		local getTaskAllowValue ;
 		on $(TARGET) {
 			bundlePath = $(BUNDLE_PATH) ;
 			bundleTarget = $(BUNDLE_TARGET) ;
@@ -574,6 +663,11 @@ rule C._ApplicationFromObjects_PostBuild
 				isysroot = $(ISYSROOT) ;
 			}
 		}
+
+		# Get task allow value - trying target first, if not set falling back to configuration, if not set defaulting to true.
+		getTaskAllowValue = $(C.$(TARGET).GET_TASK_ALLOW) ;
+		getTaskAllowValue ?= $(C.*.GET_TASK_ALLOW) ;
+		getTaskAllowValue ?= true ;
 
 		local pkginfo = @(PkgInfo:G=$(grist)) ;
 		MakeLocate $(pkginfo) : $(bundlePath) ;
@@ -620,7 +714,7 @@ rule C._ApplicationFromObjects_PostBuild
 			MakeLocate $(destEntitlementsPlist) : $(LOCATE_TARGET) ;
 			ENTITLEMENTS on $(TARGET) = $(destEntitlementsPlist) ;
 			Depends $(bundleTarget) : $(destEntitlementsPlist) : $(sourceEntitlementsPlist) ;
-			local getTaskAllow = "<key>get-task-allow<\\/key><true\\/>" ;
+			local getTaskAllow = "<key>get-task-allow<\\/key><$(getTaskAllowValue)\\/>" ;
 			GET_TASK_ALLOW on $(destEntitlementsPlist) = $(getTaskAllow) ;
 			on $(TARGET) UseCommandLine $(destEntitlementsPlist) : $(CFBundleIdentifier) $(AppIdentifierPrefix) $(getTaskAllow) ;
 			Clean $(cleanBundleTarget) : $(destEntitlementsPlist) ;
@@ -639,6 +733,13 @@ rule XIB
 
 }
 
+rule C.SetTaskAllow TARGET : VALUE
+{
+}
+
+rule C.Provision TARGET
+{
+}
 
 rule C.CodeSign TARGET
 {
@@ -684,13 +785,25 @@ rule XIB PARENT : SOURCES : THE_CONFIG : THE_PLATFORM
 	local bundlePath ;
 	on $(PARENT) bundlePath = $(BUNDLE_PATH) ;
 
+	if $(bundlePath) = ""
+	{
+		Echo *** XIB $(PARENT) \: $(SOURCES) \: $(THE_CONFIG) \: $(THE_PLATFORM) ;
+		Exit *** Bundle path not setup for target $(TARGET) ;
+	}
+
 	local grist = $(PARENT) ;
 	SOURCES = $(SOURCES:G=$(grist)) ;
 	SEARCH on $(SOURCES) = $(SEARCH_SOURCE) ;
 	
 	local targets = $(SOURCES:S=.nib) ;
 	
-	MakeLocate $(targets) : $(bundlePath) ;
+	#MakeLocate $(targets) : $(bundlePath) ;
+	# HACK:
+	# The main NIB file has to be in the root of the package, so strip directories.
+	targets = $(targets:D="") ;
+
+	MakeLocate $(targets) : $(targets:DR=$(bundlePath)) ;
+	BINDING on $(targets) = $(targets:BS) ;
 	Clean clean:$(PARENT) : $(targets) ;	
 	
 	Depends $(PARENT) : $(targets) ;
@@ -699,6 +812,11 @@ rule XIB PARENT : SOURCES : THE_CONFIG : THE_PLATFORM
 	for source in $(SOURCES)
 	{
 		local target = $(source:S=.nib) ;
+		
+		# HACK:
+		# The main NIB file has to be in the root of the package, so strip directories.
+		target = $(target:D="") ;
+		
 		Depends $(target) : $(source) ;
 	
 		CompileXIB $(target) : $(source) ;
@@ -711,6 +829,50 @@ actions CompileXIB
 	/Developer/usr/bin/ibtool --errors --warnings --notices --output-format human-readable-text --compile $(1:C) $(2:C)
 }
 
+rule C.Provision TARGET : PROFILE_ID
+{
+	# Find profile from GUID.
+	local _profileDir = "$(HOME)/Library/MobileDevice/Provisioning Profiles" ;
+
+	# Open each profile and search for : "<string>$(PROFILE_ID)</string>"
+	local _mobileProvisions = [ Glob $(_profileDir) : *.mobileprovision ] ;
+
+	local _matchingProvision = "" ;
+
+	local _mobileProvision ;
+	for _mobileProvision in $(_mobileProvisions)
+	{
+		local _cmd = "cat \"$(_mobileProvision)\" | grep \"<string>$(PROFILE_ID)</string>\"" ;
+		result = [ Shell $(_cmd) ] ;
+		if $(result) != ""
+		{
+			_matchingProvision = $(_mobileProvision) ;
+		}
+	}
+
+	if $(_matchingProvision) = ""
+	{
+		Exit *** No mobile provisions found that match PROFILE_ID \: $(PROFILE_ID) ;
+	}
+
+	# Get bundle path.
+	local _bundlePath = "" ;
+	on $(TARGET) _bundlePath = $(BUNDLE_PATH) ;
+
+	if $(_bundlePath) = ""
+	{
+		Echo *** C.Provision $(TARGET) \: $(PROFILE_ID) ;
+		Exit *** Bundle path not setup for target $(TARGET) ;
+	}
+
+	# Copy provision into the bundle and name it embedded.mobileprovision
+	CopyFile $(TARGET) : $(_bundlePath)/embedded.mobileprovision : $(_matchingProvision) ;
+}
+
+actions C._CodeSignWithoutEntitlements
+{
+	/usr/bin/codesign -f -s "$(PROVISIONING_PROFILE)" --resource-rules="$(BUNDLE_PATH)/ResourceRules.plist" $(BUNDLE_PATH)
+}
 
 actions C._CodeSign
 {
@@ -724,6 +886,7 @@ rule C.CodeSign TARGET : PROVISIONING_PROFILE
 		local bundlePath ;
 		local bundleTarget ;
 		local cleanBundleTarget ;
+		local bundleExe ;
 		local linkTarget ;
 		local entitlements ;
 
@@ -731,12 +894,18 @@ rule C.CodeSign TARGET : PROVISIONING_PROFILE
 			bundlePath = $(BUNDLE_PATH) ;
 			bundleTarget = $(BUNDLE_TARGET) ;
 			cleanBundleTarget = $(CLEAN_BUNDLE_TARGET) ;
+			bundleExe = $(BUNDLE_EXE) ;
 			linkTarget = $(LINK_TARGET) ;
 			entitlements = $(ENTITLEMENTS) ;
 		}
 
 		local codeResources = [ C.TargetGrist $(TARGET) : CodeResources ] ;
 		MakeLocate $(codeResources) : $(bundlePath)/_CodeSignature ;
+
+		# Setup dependency between code resources (signature) and the bundle target, because if anything
+		# changes with the bundle target (file being copied into it for example) the signature needs
+		# updating.
+		Depends $(codeResources) : $(bundleTarget) ;
 
 		local codeResourcesSymbolicLink = [ C.TargetGrist $(TARGET) : CodeResourcesLink ] ;
 		BINDING on $(codeResourcesSymbolicLink) = CodeResources ;
@@ -746,12 +915,17 @@ rule C.CodeSign TARGET : PROVISIONING_PROFILE
 		ENTITLEMENTS on $(codeResources) = $(entitlements) ;
 		PROVISIONING_PROFILE on $(codeResources) = $(PROVISIONING_PROFILE) ;
 
-		local dependsList = [ DependsList $(bundleTarget) ] $(linkTarget) $(entitlements) ;
+		# Bundle exe depends on link target.
+		Depends $(bundleExe) : $(linkTarget) ;
+		C.Strip $(bundleExe) : $(linkTarget) ;
+
+		# Code signing depends on bundle (stripped) exe.
+		local dependsList = [ DependsList $(bundleTarget) ] $(bundleExe) $(entitlements) ;
 		C._CodeSign $(codeResources) : $(dependsList) ; 
 
 		UseCommandLine $(codeResources) : $(dependsList) ;
 		Depends $(TARGET) : $(codeResources) : $(dependsList) ;
-		Clean $(cleanBundleTarget) : $(codeResources) $(codeResourcesSymbolicLink) ;
+		Clean $(cleanBundleTarget) : $(codeResources) $(codeResourcesSymbolicLink) $(bundleExe) ;
 	}
 }
 
@@ -876,6 +1050,15 @@ Make sure you're visiting this page on your device, not your computer.</p>
 actions C._BundleArchive
 {
 	/usr/bin/xcrun -sdk iphoneos PackageApplication -v "$(BUNDLE_PATH)" -o "$(1)" --sign "$(PROVISIONING_PROFILE)" --embed "$(BUNDLE_PATH)/embedded.mobileprovision"
+}
+
+if $(PLATFORM) in iphone iphonesimulator
+{
+	C.Defines * : _IPHONE ;
+}
+else if $(PLATFORM) in ipad ipadsimulator
+{
+	C.Defines * : _IPHONE _IPAD ;
 }
 
 
