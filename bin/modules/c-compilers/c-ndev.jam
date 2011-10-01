@@ -186,6 +186,18 @@ C.LinkPrebuiltLibraries	* :
 	TRK_Hollywood_Revolution.a	
 : * : wii ;
 
+C.LinkPrebuiltLibraries	* :	
+	osD.a
+	gxD.a
+	dvdD.a
+: debug : wii ;
+
+C.LinkPrebuiltLibraries	* :	
+	os.a
+	gx.a
+	dvd.a
+: release final : wii ;
+
 # -----------------------------------------------------------------
 
 } # TARGETINFO_LOCATE
