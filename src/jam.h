@@ -472,11 +472,15 @@
 #include <limits.h>
 
 # ifndef MAXLINE
-# ifdef NT
-# define MAXLINE 10240	/* longest 'together' actions' */
-# else
-# define MAXLINE INT_MAX
-# endif
+#  ifdef NT
+#   define MAXLINE 10240	/* longest 'together' actions' */
+#  else
+#   if defined(ARG_MAX)
+#    define MAXLINE ARG_MAX	// If we have ARG_MAX defined in a system header then use it (fix for MacOSX when cleaning large number of files).
+#   else
+#    define MAXLINE INT_MAX	// Not ARG_MAX defined, so do what it did before - scraft.
+#   endif
+#  endif
 # endif
 
 # ifndef EXITOK
