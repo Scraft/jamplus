@@ -1,0 +1,11 @@
+C.CFlags * : /Od /EHsc /MDd /W3 /Z7 : debug : palmpdksim ;
+C.C++Flags * : /Od /EHsc /MDd /W3 /Z7 : debug : palmpdksim ;
+C.LibFlags * : : debug : palmpdksim ;
+C.LinkFlags * : /INCREMENTAL /DEBUG /MACHINE:X86 : debug : palmpdksim ;
+
+C.Defines * : palmpdksim WINDOWS : debug : palmpdksim ;
+
+C.CFlags * : /RTC1 : debug : palmpdksim ;
+C.C++Flags * : /RTC1 : debug : palmpdksim ;
+
+VSCONFIGMAP.debug = Debug ;

@@ -1,0 +1,83 @@
+rule C._LinkPrebuiltLibraries
+{
+}
+
+
+# C.AutoDetect will check for an Android NDK install we can use, and will setup the following three variables:
+# 1. PalmPDK			- pointing to root of PDK, e.g.	C:\Program Files (x86)\Palm\PDK
+# 2. PalmSDK			- pointing to root of SDK, e.g.	C:\Program Files (x86)\Palm\SDK
+
+rule C.AutoDetect
+{
+	if $(COMPILER.$(PLATFORM))  &&  $(COMPILER.$(PLATFORM)) != palmpdksim 
+	{
+		return ;
+	}
+
+	# 1. PalmPDK
+	PalmPDK = $(PalmPDK:J=" ") ;	
+	if ! $(PalmPDK) 
+	{
+		echo PalmPDK not set ;
+		return ;
+	}
+	
+	# 2. PalmSDK
+	PalmSDK = $(PalmSDK:J=" ") ;
+	if ! $(PalmSDK)
+	{
+		echo PalmSDK not set ;
+		return ;
+	}
+
+	# Set platform
+	COMPILER.$(PLATFORM) = palmpdksim ;
+	
+# ---	
+	
+	IncludeModule c-compilers/c-vc-autodetect ;
+	local _test = [ FindVisualStudio 8.0 ] ;
+	
+# ---	
+	
+MSSDK = $(MSVCNT) ;
+MSSDK_STDHDRS = "$(MSSDK)/include" "$(MSSDK)/PlatformSDK/Include" ;
+MSSDK_LINKDIRECTORIES = "$(MSVCNT)/lib" "$(MSVCNT)/PlatformSDK/lib" ;	
+	
+# ---	
+	
+MSVCBIN			?= "$(MSVCNT)/bin/" ;
+C.AR			= "$(MSVCBIN)lib" ;
+C.CC			= "$(MSVCBIN)cl" ;
+C.C++			= "$(MSVCBIN)cl" ;
+C.LINK			= "$(MSVCBIN)link" ;
+C.MT			= "$(MSSDK)/bin/mt" ;
+C.RC			= "$(MSSDK)/bin/RC" ;
+
+C.STDHDRS		?= "$(MSSDK_STDHDRS)" ;
+C.STDLINKDIRECTORIES ?= "$(MSSDK_LINKDIRECTORIES)" ;
+
+C.IncludeDirectories *		: "$(PalmPDK)/Include" ;
+C.IncludeDirectories *		: "$(PalmPDK)/Include/SDL" ;
+C.LinkDirectories *			: "$(PalmPDK)/host/lib" ;
+C.LinkPrebuiltLibraries *	: SDLmain.lib SDL.lib dgles.lib libpdl.lib SDL_mixer.lib Ws2_32.lib ;
+	
+# ---	
+
+VSPLATFORMMAP.palmpdksim = "Palm PDK Sim" ;
+	
+# ---		
+	
+	IncludeModule c-compilers/c-vc ;
+	
+# ---	
+	
+	if $(PLATFORM) != *  &&  $(CONFIG) != * 
+	{
+		# Use PalmPDKSim specific module.
+		UseModule c-compilers/$(PLATFORM)-vc ;
+		UseModule c-compilers/$(PLATFORM)-vc-$(CONFIG) ;
+	}
+
+	return $(COMPILER.$(PLATFORM)) ;
+}

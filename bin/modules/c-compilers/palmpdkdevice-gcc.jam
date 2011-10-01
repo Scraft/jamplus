@@ -1,0 +1,360 @@
+######################################################################################################################
+
+C.AR			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-ar.exe" ru ;
+C.CC			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
+C.C++			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
+C.LINK			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
+C.RANLIB		?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-ranlib.exe" ;
+C.STRIP			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-strip.exe" ;
+
+######################################################################################################################
+# Our 'exe' is actually a shared lib, so make extension .so file.
+SUFEXE		= "" ;
+SUFMODULE	= .so ;
+
+######################################################################################################################
+
+rule C.FDefines { return -D\"$(<)\" ; }
+rule C.FIncludes { return -I\"$(<)\" ; }
+rule C.FLibraryPaths { return -L\"$(<)\" ; } 
+
+######################################################################################################################
+
+COMPILE_FLAGS = 
+	-fsigned-char 
+	-ftree-vectorize
+	-mfloat-abi=softfp
+	-ffast-math
+	-fsingle-precision-constant 
+	-Wno-deprecated
+	-Wno-psabi
+	-fvisibility=hidden 
+	-ffunction-sections 
+	-fdata-sections 
+	-funswitch-loops 
+	-finline-limit=512
+	;
+	
+# Pre only
+#COMPILE_FLAGS += 
+#	-mcpu=cortex-a8 
+#	-mfpu=neon
+#	;
+
+# All devices
+COMPILE_FLAGS += 
+	-mcpu=arm1136jf-s 
+	-mfpu=vfp
+	;
+	
+COMPILE_FLAGS_DEBUG =
+	-g
+	-O0
+	;
+	
+COMPILE_FLAGS_NON_DEBUG =
+	-fomit-frame-pointer 
+	-O2
+	-g
+	;
+
+######################################################################################################################
+
+C.CFlags * : 
+	$(COMPILE_FLAGS)
+	;
+	
+C.CFlags * :
+	$(COMPILE_FLAGS_DEBUG)
+: debug ;
+	
+C.CFlags * :
+	$(COMPILE_FLAGS_NON_DEBUG)
+: release final ;
+
+######################################################################################################################
+# NDK doesn't support RTTI or exceptions - Android build system adds these compile flags when building C++ code.
+
+C.C++Flags * : 
+	$(COMPILE_FLAGS)
+	-fno-exceptions
+	-fno-rtti
+	;
+	
+C.C++Flags * :
+	$(COMPILE_FLAGS_DEBUG)
+: debug ;
+	
+C.C++Flags * :
+	$(COMPILE_FLAGS_NON_DEBUG)
+: release final ;
+
+######################################################################################################################
+
+C.Defines * :
+	__ARM_ARCH_5__ 
+	__ARM_ARCH_5T__ 
+	__ARM_ARCH_5E__ 
+	__ARM_ARCH_5TE__ 
+	__NEW__ 
+	__SGI_STL_INTERNAL_PAIR_H 
+	_PALM
+	_PALMDEVICE
+	TCHAR=char 
+	;
+	
+C.Defines * : _DEBUG : debug ;
+C.Defines * : NDEBUG : release ;
+C.Defines * : NDEBUG _FINAL : final ;
+
+######################################################################################################################
+
+C.IncludeDirectories * : $(PalmPDK)/include $(PalmPDK)/include/SDL ;
+
+######################################################################################################################
+# Another flag, -Wl,-soname is set when linking as it contains the link target name that isn't accessible yet.
+
+C.LinkFlags * :
+#	-Wl,-dead_strip
+#	-Wl,-gc-sections
+	-Wl,--whole-archive 
+	-Wl,--no-whole-archive
+	-Wl,--no-undefined
+	-g
+#	-lstdc++
+	-static-libstdc++
+	-lrt
+	-Wl,--allow-shlib-undefined
+	;
+
+######################################################################################################################
+
+C.LinkDirectories * :
+	"$(PalmPDK)/device/lib"
+	;
+ 
+######################################################################################################################
+# TODO : Currently links against GLES, dl (for opening the GLES dynamic library) and log (for log messages), as well
+# as the real basics libc, libstdc++, libm, libgcc. Also links against stlport from Ndk Wrappers.
+
+C.LinkPrebuiltLibraries * :
+	"SDL"
+	"GLES_CM"
+	"SDL_mixer"
+	"pdl"
+	;
+
+######################################################################################################################
+
+VSPLATFORMMAP.palmpdkdevice = "Palm PDK Device" ;
+
+rule C._ApplicationFromObjects_LinkFlags
+{
+	local outputName = [ C._retrieveOutputName $(TARGET) ] ;
+	local bundlePath = $(outputPath)/$(outputName).app ;
+	BUNDLE_PATH on $(TARGET) = $(bundlePath) ;
+	bundleExe = [ C.TargetGrist $(TARGET)|bundle : $(_linkTargets:S="") ] ;
+	MakeLocate $(bundleExe) : $(bundlePath) ;
+	BUNDLE_EXE on $(TARGET) = $(bundleExe) ;	
+	
+	local bundleTarget = $(TARGET):bundle ;
+	local cleanBundleTarget = clean:$(bundleTarget) ;
+	BUNDLE_TARGET on $(TARGET) = $(bundleTarget) ;
+	CLEAN_BUNDLE_TARGET on $(TARGET) = $(cleanBundleTarget) ;
+	Depends $(TARGET) : $(bundleTarget) ;
+	NotFile $(bundleTarget) ;
+	Depends clean:$(TARGET) : $(cleanBundleTarget) ;
+	NotFile $(cleanBundleTarget) ;
+	Always $(cleanBundleTarget) ;
+}
+
+rule C._BundleInfoString KEY : VALUE 
+{
+	APPINFO_JSON on $(TARGET) += ",$(NEWLINE)$(TAB)\"$(KEY)\": \"$(VALUE)\"" ;
+}
+
+rule C._BundleInfoInteger KEY : VALUE 
+{
+	APPINFO_JSON on $(TARGET) += ",$(NEWLINE)$(TAB)\"$(KEY)\": $(VALUE)" ;
+}
+
+rule C.BundleInfo TARGET : TYPE : VALUE 
+{
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	on $(TARGET) if ! $(APPINFO_JSON) 
+	{
+		APPINFO_JSON on $(TARGET) ?= "{
+	\"type\": \"pdk\"" ;
+	}
+	
+	switch $(TYPE:L)
+	{
+		case title 			:	C._BundleInfoString title : $(VALUE) ;
+		case id 			:	
+			C._BundleInfoString id : $(VALUE:L) ;
+			on $(TARGET) BUNDLE_ID = $(VALUE:L) ;
+		case icon 			:	C._BundleInfoString icon : $(VALUE) ;
+		case version 		:	
+			C._BundleInfoString version : $(VALUE) ;
+			on $(TARGET) BUNDLE_VERSION = $(VALUE) ;
+		case vendor  		:	C._BundleInfoString vendor : $(VALUE) ;
+		case requiredMemory :	C._BundleInfoInteger requiredMemory : $(VALUE) ;
+	}
+}
+
+actions Palm.StripFake
+{
+	$(CP) $(2:TC\\) $(1:TC\\) > NUL
+}
+
+actions Palm.Strip
+{
+	$(C.STRIP:TC\\) -s -o $(1:TC\\) $(2:TC\\)
+}
+
+actions Palm.Package
+{
+	CD /D %windir%\Sysnative
+	palm-package $(BUNDLE_PATH:TC\\) -o $(1:DTC\\)
+}
+
+rule C._ApplicationFromObjects_PostBuild
+{
+	local newLine = "
+" ;
+
+	local bundlePath ;
+	local bundleTarget ;
+	local cleanBundleTarget ;
+	local bundleExe ;
+	local linkTarget ;
+	local bundleId ;
+	local bundleVersion ;
+	on $(TARGET) {
+		bundlePath = $(BUNDLE_PATH) ;
+		bundleTarget = $(BUNDLE_TARGET) ;
+		cleanBundleTarget = $(CLEAN_BUNDLE_TARGET) ;
+		bundleExe = $(BUNDLE_EXE) ;
+		linkTarget = $(LINK_TARGET) ;
+		bundleId = $(BUNDLE_ID) ;
+		bundleVersion = $(BUNDLE_VERSION) ;
+	}
+
+	# Package properties file.
+	local packageProperties = @(package.properties:G=$(grist)) ;
+	MakeLocate $(packageProperties) : $(bundlePath) ;
+	local contents = filemode.755=$(bundleExe:BS)$(newLine) ;
+	CONTENTS on $(packageProperties) = $(contents) ;
+	WriteFile $(packageProperties) ;
+	UseCommandLine $(packageProperties) : $(contents) ;
+	Depends $(bundleTarget) : $(packageProperties) ;
+	Clean $(cleanBundleTarget) : $(packageProperties) ;
+	
+	# Bundle exe depends on link target.
+	Depends $(bundleExe) : $(linkTarget) ;
+	Palm.Strip $(bundleExe) : $(linkTarget) ;
+	
+	Depends $(bundleTarget) : $(bundleExe) ;
+	Depends $(TARGET) : $(bundleExe) ;
+	Clean $(cleanBundleTarget) : $(bundleExe) ;
+	
+	# appinfo.json
+	local localappInfoJsonContents ;
+	on $(TARGET) localappInfoJsonContents = $(APPINFO_JSON) ;
+	if $(localappInfoJsonContents)
+	{
+		localappInfoJsonContents += ",
+	\"main\": \"$(bundleExe:BS)\"		
+}" ;
+
+		localappInfoJsonContents = $(localappInfoJsonContents:J="") ;
+		
+		local localappInfoJson = @(appinfo.json:G=$(grist)) ;
+		MakeLocate $(localappInfoJson) : $(bundlePath) ;
+		CONTENTS on $(localappInfoJson) = $(localappInfoJsonContents) ;
+		WriteFile $(localappInfoJson) ;
+		
+		UseCommandLine $(localappInfoJson) : $(localappInfoJsonContents) ;
+		Depends $(bundleTarget) : $(localappInfoJson) ;
+		Clean $(cleanBundleTarget) : $(localappInfoJson) ;		
+	}
+	
+	# Final package.
+	local finalPackage = [ C.TargetGrist $(TARGET) : $(bundleId)_$(bundleVersion)_all.ipk ] ;
+	MakeLocate $(finalPackage) : $(LOCATE_TARGET) ;	
+	Depends $(finalPackage) : $(bundleTarget) ;
+	
+	BUNDLE_PATH on $(finalPackage) = $(bundlePath) ;
+	Palm.Package $(finalPackage) ;
+	
+	Depends $(TARGET) : $(finalPackage) ;
+	Clean $(cleanBundleTarget) : $(finalPackage) ;
+	
+	# Install batch file.
+	local installBatchFile = [ C.TargetGrist $(TARGET) : $(bundleId)_$(bundleVersion)_all_install.bat ] ;
+	MakeLocate $(installBatchFile) : $(LOCATE_TARGET) ;
+	local _installBatchFileContents = "pushd \"%~dp0\" && palm-install \"$(finalPackage:TC\\)\" & popd" ;
+	CONTENTS on $(installBatchFile) = $(_installBatchFileContents) ;
+	WriteFile $(installBatchFile) ;	
+	UseCommandLine $(installBatchFile) : $(_installBatchFileContents) ;
+	Depends $(bundleTarget) : $(installBatchFile) ;
+	Clean $(cleanBundleTarget) : $(installBatchFile) ;
+	
+	# Launch batch file.
+	local launchBatchFile = [ C.TargetGrist $(TARGET) : $(bundleId)_$(bundleVersion)_all_launch.bat ] ;
+	MakeLocate $(launchBatchFile) : $(LOCATE_TARGET) ;
+	local _launchBatchFileContents = "palm-launch $(bundleId)" ;
+	CONTENTS on $(launchBatchFile) = $(_launchBatchFileContents) ;
+	WriteFile $(launchBatchFile) ;	
+	UseCommandLine $(launchBatchFile) : $(_launchBatchFileContents) ;
+	Depends $(bundleTarget) : $(launchBatchFile) ;
+	Clean $(cleanBundleTarget) : $(launchBatchFile) ;
+}
+
+######################################################################################################################
+# Using custom C.Link as we need to specify the exectuable name as part of the flags, and using custom rules for
+# everything else as we need to do some cygwin setup first. Ideally we'd share the actions in g-gcc and just do our
+# cygwin setup first, but I'm not sure if that is possible to do right now.
+
+# Tell cygwin not to moan about DOS filenames, and put cygwin's bin folder on the path so it can find cygwin1.dll
+# CYGWIN_SETUP = "SET CYGWIN=nodosfilewarning & SET PATH=%PATH%;%CYGWIN_PATH%\\bin" ;
+
+actions response C.Link
+{
+	"$(C.LINK)" -Wl,-soname,$(<[1]:CBS) @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:TC)) -o $(<[1]:C)
+}
+
+actions updated together piecemeal response C.Archive
+{
+	"$(C.AR)" @@($(LIBFLAGS) $(<:C) $(>:C))
+}
+
+actions together C.Ranlib
+{
+	"$(C.RANLIB)" $(<:C)
+}
+
+if $(NOARUPDATE)
+{
+	actions response C.Archive
+	{
+		"$(C.AR)" @@($(LIBFLAGS) $(<:C)) $(>:C)
+	}
+}
+
+actions updated response C.CC
+{
+	"$(C.CC)" @@(-c $(MFLAGS)) $(>:C)
+}
+
+actions updated response C.C++
+{
+	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+}
+
+actions updated response C.PCH
+{
+	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
+}
+
+######################################################################################################################
