@@ -1,0 +1,7 @@
+C.Flags CC	: * : -g -Os : distribution : iphone ;
+C.Flags C++	: *	: -g -Os : distribution : iphone ;
+C.Flags M	: *	: -g -Os : distribution : iphone ;
+C.Flags MM	: *	: -g -Os : distribution : iphone ;
+C.SetTaskAllow * : false ;
+
+VSCONFIGMAP.distribution = Distribution ;
