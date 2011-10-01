@@ -25,7 +25,7 @@ STL_PORT_INCLUDE	=  $(STL_PORT_BASE)/stlport ;
 ######################################################################################################################
 
 rule C.FDefines { return -D$(<) ; }
-rule C.FIncludes { return -I$(<) ; }
+rule C.FIncludes { return -I\"$(<)\" ; }
 rule C.FLibraryPaths { return -L\"$(<)\" ; } 
 
 ######################################################################################################################
@@ -46,20 +46,26 @@ COMPILE_FLAGS =
 	-marm
 	-fno-omit-frame-pointer
 	-fvisibility=hidden 
-	-finline-limit=64 
-	-Wa,--noexecstack 
+	-w
+	-Wno-psabi
+	-Wa,--noexecstack
 	-Wreturn-type 
-	-Wa,--noexecstack 
+	-fsigned-char
 	;
 	
 COMPILE_FLAGS_DEBUG =
 	-marm
 	-fno-omit-frame-pointer
+	-finline-limit=64
+	-O0
 	-g
 	;
 	
 COMPILE_FLAGS_RELEASE =
 	-fomit-frame-pointer 
+	-funswitch-loops
+	-finline-limit=300
+	-Os
 	;
 
 ######################################################################################################################
@@ -74,7 +80,7 @@ C.CFlags * :
 	
 C.CFlags * :
 	$(COMPILE_FLAGS_RELEASE)
-: release ;
+: release final ;
 
 ######################################################################################################################
 
@@ -103,6 +109,7 @@ C.Defines * :
 	
 C.Defines * : _DEBUG : debug ;
 C.Defines * : NDEBUG : release ;
+C.Defines * : NDEBUG _FINAL : final ;
 
 ######################################################################################################################
 # Another flag, -Wl,-soname is set when linking as it contains the link target name that isn't accessible yet.
@@ -113,7 +120,7 @@ C.LinkFlags * :
 	-Wl,--whole-archive 
 	-Wl,--no-whole-archive
 	-Wl,--no-undefined
-	-Wl,-rpath-link=$(NDK_MAIN_LIB_DIR)
+	-Wl,-rpath-link=\"$(NDK_MAIN_LIB_DIR)\"
 	-g
 	;
 
