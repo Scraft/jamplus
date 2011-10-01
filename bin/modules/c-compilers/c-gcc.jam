@@ -52,6 +52,11 @@ rule C.FDefines { return -D$(<) ; }
 rule C.FIncludes { return -I$(<) ; }
 rule C.FLibraryPaths { return -L$(<) ; }
 
+# Rule to force include a given file when compiling.
+rule C._ForceIncludeFlagHelper TARGETS : INCLUDE
+{
+	return "-include $(INCLUDE:C)" ;
+}
 
 rule C._LinkPrebuiltLibraries
 {
@@ -185,7 +190,7 @@ rule C._MultiCppCompile_SetupFlags
 			HDRSEARCH on $(_pchName) = $(_hdrs) ;
 		}
 
-		_flags += -include $(_pchFilename:$(_pchIncludeFilenameModifiers)) ;
+		_flags += [ C._ForceIncludeFlagHelper $(TARGET) : $(_pchFilename:$(_pchIncludeFilenameModifiers)) ] ;
 
 		HDREXTRA on $(_src) += $(_pchName:T) ;
 
@@ -202,7 +207,7 @@ rule C._MultiCppCompile_SetupFlags
 
 	if $(objectForceIncludes[1]) {
 		SEARCH on $(objectForceIncludes) = $(_hdrs) ;
-		_flags += "-include $(objectForceIncludes:G=)" ;
+		_flags += [ C._ForceIncludeFlagHelper $(TARGET) : $(objectForceIncludes:G=) ] ;
 	}
 
 	if ! ( $(PF) in wii ps3 )
