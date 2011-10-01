@@ -1,0 +1,20 @@
+rule C.AutoDetect 
+{
+	if ! $(BADA_SDK2_HOME) 
+	{
+		return ;
+	}
+	
+	BADA_SDK_HOME = $(BADA_SDK2_HOME:J=" ") ;
+
+	COMPILER.$(PLATFORM) = bada2 ;
+
+	UseModule c-compilers/c-mingw ;
+	if $(PLATFORM) != *  &&  $(CONFIG) != * 
+	{
+		UseModule c-compilers/bada-mingw ;
+		UseModule c-compilers/bada-mingw-$(CONFIG) ;
+	}
+
+	return $(COMPILER.$(PLATFORM)) ;
+}

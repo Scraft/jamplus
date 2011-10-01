@@ -1,8 +1,23 @@
-C.AR		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\Win32\\bin\\i686-mingw32-ar.exe" ru ;
-C.CC		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\Win32\\bin\\i686-mingw32-gcc" ;
-C.C++		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\Win32\\bin\\i686-mingw32-g++" ;
-C.LINK		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\Win32\\bin\\i686-mingw32-g++" ;
-C.RANLIB	?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\Win32\\bin\\i686-mingw32-ranlib" ;
+C.AR		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\ARM\\bin\\arm-samsung-nucleuseabi-ar" ru ;
+C.CC		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\ARM\\bin\\arm-samsung-nucleuseabi-gcc" ;
+C.C++		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\ARM\\bin\\arm-samsung-nucleuseabi-g++.exe" ;
+C.LINK		?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\ARM\\bin\\arm-samsung-nucleuseabi-g++.exe" ;
+C.RANLIB	?= "$(BADA_SDK_HOME)\\Tools\\Toolchains\\ARM\\bin\\arm-samsung-nucleuseabi-ranlib.exe" ;
+
+######################################################################################################################
+
+rule C.FDefines { return -D$(<) ; }
+rule C.FIncludes { return -I\"$(<)\" ; }
+rule C.FLibraryPaths { return -L\"$(<)\" ; } 
+
+######################################################################################################################
+
+if $(PLATFORM) != bada1 && $(PLATFORM) != bada2
+{
+	Exit *** Error \: Expected PLATFORM to be bada1 or bada2 not $(PLATFORM) ;
+}
+
+######################################################################################################################
 
 # -------------------------------------------------------------------------------------
 # Defines
@@ -14,7 +29,12 @@ C.Defines *	:
 	_BADA 
 	SHP 
 	BUILD_DLL 
+	EA_PLATFORM_BADA
+	TCHAR=char
 	;
+	
+C.Defines * : _BADA1_SDK : * : bada1 ;
+C.Defines * : _BADA2_SDK : * : bada2 ;
 	
 # -------------------------------------------------------------------------------------
 # Debug
@@ -25,47 +45,39 @@ C.Defines * :
 : debug ;
 
 # -------------------------------------------------------------------------------------
-# CFlags
-# -------------------------------------------------------------------------------------
-# Generic
+# Compiler flags
 # -------------------------------------------------------------------------------------
 
-C.CFlags * :
+local _compilerFlags =
 	-Wno-deprecated
-	-g3 
+	-g 
+	-fpic
+	-march=armv7-a 
+	-mthumb 
+	-mthumb-interwork 
+	-mfpu=vfpv3 
+	-mfloat-abi=hard
 #	-Wall 
 	-fmessage-length=0
+	-Wno-psabi	# Get rid of the mangling of 'va_list' has changed in GCC 4.4
+	-fsigned-char
+	-fshort-wchar
 	;
 	
-# -------------------------------------------------------------------------------------
-# Debug
-# -------------------------------------------------------------------------------------
-	
-C.CFlags * : -O0 : debug ;
+if $(CONFIG) = debug
+{
+	_compilerFlags += -O0 ;
+}
+else
+{
+	_compilerFlags += -Os ;
+}
 
-# -------------------------------------------------------------------------------------
-# C++Flags
-# -------------------------------------------------------------------------------------
-# Generic
-# -------------------------------------------------------------------------------------
-
-C.C++Flags * :
-	-Wno-deprecated 
-	-g3 
-#	-Wall 
-	-fmessage-length=0
-	;
-	
-# -------------------------------------------------------------------------------------
-# Debug
-# -------------------------------------------------------------------------------------
-	
-C.CFlags * : -O0 : debug ;
+C.CFlags *		: $(_compilerFlags) ;
+C.C++Flags *	: $(_compilerFlags) ;
 
 # -------------------------------------------------------------------------------------
 # Include directories
-# -------------------------------------------------------------------------------------
-# Generic
 # -------------------------------------------------------------------------------------
 
 C.IncludeDirectories * : 
@@ -75,31 +87,30 @@ C.IncludeDirectories * :
 # -------------------------------------------------------------------------------------
 # C.LinkDirectories
 # -------------------------------------------------------------------------------------
-# Generic
-# -------------------------------------------------------------------------------------
+
+if $(PLATFORM) = bada1
+{
+	BADA_MODEL = Wave_LP1 ;
+}
+else if $(PLATFORM) = bada2
+{
+	BADA_MODEL = WaveWVGA ;
+}
 
 C.LinkDirectories * :
-	$(BADA_SDK_HOME)/Model/Wave/Simulator
-	$(BADA_SDK_HOME)/Lib
+	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target
 	;
 
 # -------------------------------------------------------------------------------------
 # LinkPrebuiltLibraries
 # -------------------------------------------------------------------------------------
-# Generic
-# -------------------------------------------------------------------------------------
 
 C.LinkPrebuiltLibraries * :
-	osp_rt0 
-	c-newlib
-	FApp 
-	FUi 
-	FUiControls 
-	FBase 
-	FSystem 
-	FGraphics 
-	FGraphicsOpengl 
-	FGraphicsEgl 
+	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target/osp_rt0.a 
+	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target/FOsp.so 
+	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target/FGraphicsOpengl.so 
+	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target/FGraphicsEgl.so 
+	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target/StubDynCast.so 
 	;
 
 # -------------------------------------------------------------------------------------
@@ -109,9 +120,16 @@ C.LinkPrebuiltLibraries * :
 # -------------------------------------------------------------------------------------
 
 C.LinkFlags * :
-	--enable-auto-import
-	-shared
-	;	
+#	--enable-auto-import
+	-shared 
+	-Wl,--no-undefined
+	-march=armv7-a 
+	-mthumb 
+	-mthumb-interwork 
+	-mfpu=vfpv3 
+	-mfloat-abi=hard
+	-fsigned-char
+	;
 
 # -------------------------------------------------------------------------------------
 # Misc
@@ -119,4 +137,5 @@ C.LinkFlags * :
 # Generic
 # -------------------------------------------------------------------------------------
 
-VSPLATFORMMAP.bada = "Bada" ;
+VSPLATFORMMAP.bada1 = "Bada SDK 1" ;
+VSPLATFORMMAP.bada2 = "Bada SDK 2" ;

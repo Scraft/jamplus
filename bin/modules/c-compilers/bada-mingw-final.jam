@@ -1,0 +1,6 @@
+C.Flags CC	: * : -g -O2 : final : win32 ;
+C.Flags C++	: *	: -g -O2 : final : win32 ;
+C.Flags M	: *	: -g -O2 : final : win32 ;
+C.Flags MM	: *	: -g -O2 : final : win32 ;
+
+VSCONFIGMAP.final = Final ;
