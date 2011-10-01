@@ -1,0 +1,34 @@
+PLAYBOOK_NATIVE_ENV_BATCH_FILE = ;
+
+rule C.AutoDetect 
+{
+	if ! $(BBNDK)
+	{
+		return ;
+	}
+	
+	BBNDK = $(BBNDK:J=" ") ;
+
+	PLAYBOOK_NATIVE_ENV_BATCH_FILE = [ Glob $(BBNDK) : *NativeSDK-env.bat ] ;
+	if ! $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	{
+		return ;
+	}
+	else
+	{
+		PLAYBOOK_NATIVE_ENV_BATCH_FILE = $(PLAYBOOK_NATIVE_ENV_BATCH_FILE:J=" ") ;
+		PLAYBOOK_NATIVE_ENV_BATCH_FILE = $(PLAYBOOK_NATIVE_ENV_BATCH_FILE:TC\\) ;
+	}
+	
+	COMPILER.$(PLATFORM) = playbooksimulator ;
+
+	# Use generic gcc module.
+	UseModule c-compilers/c-gcc ;
+	
+	if $(PLATFORM) != *  &&  $(CONFIG) != * 
+	{
+		UseModule c-compilers/playbook-gcc ;
+	}
+	
+	return $(COMPILER.$(PLATFORM)) ;
+}

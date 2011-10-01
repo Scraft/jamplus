@@ -1,0 +1,444 @@
+######################################################################################################################
+if $(PLATFORM) = playbooksimulator
+{
+	QCC_PLATFORM_DIR	= x86 ;
+	QCC_PLATFORM		= ntox86 ;
+	QCC_ENDIAN_SUFFIX	= "" ;
+}
+else if $(PLATFORM) = playbookdevice
+{
+	QCC_PLATFORM_DIR	= armle-v7 ;
+	QCC_PLATFORM		= ntoarmv7 ;
+	QCC_ENDIAN_SUFFIX	= le ;
+}
+
+C.AR			= qcc -Vgcc_$(QCC_PLATFORM)$(QCC_ENDIAN_SUFFIX) ;
+C.CC			= qcc -Vgcc_$(QCC_PLATFORM)$(QCC_ENDIAN_SUFFIX) ;
+C.C++			= qcc -Vgcc_$(QCC_PLATFORM)$(QCC_ENDIAN_SUFFIX) ;
+C.LINK			= qcc -Vgcc_$(QCC_PLATFORM)$(QCC_ENDIAN_SUFFIX) ;
+C.STRIP			= $(QCC_PLATFORM)-strip ;
+C.RANLIB		= $(QCC_PLATFORM)-ranlib ;
+
+######################################################################################################################
+# Our 'exe' is actually a shared lib, so make extension .so file.
+SUFEXE		= ;
+SUFMODULE	= ;
+
+######################################################################################################################
+
+rule C.FDefines { return -D$(<) ; }
+rule C.FIncludes { return -I\"$(<)\" ; }
+rule C.FLibraryPaths { return -L\"$(<)\" ; } 
+
+# Rule to force include a given file when compiling.
+rule C._ForceIncludeFlagHelper TARGETS : INCLUDE
+{
+	return "-Wc,-include$(INCLUDE:TCBS) -I$(INCLUDE:TCD)" ;
+}
+
+######################################################################################################################
+
+COMPILE_FLAGS = 
+	-Wno-psabi				# Get rid of the mangling of 'va_list' has changed in GCC 4.4
+	-fsigned-char
+	-Y_cpp-ne
+#	-finstrument-functions
+#	-funwind-tables 
+	-fstack-protector-all 
+	-fno-short-enums 
+	-fno-strict-aliasing 	
+	;
+	
+COMPILE_FLAGS_DEBUG =
+	-w1
+	-g
+	;
+
+######################################################################################################################
+
+C.CFlags * : 
+	$(COMPILE_FLAGS)
+	;
+	
+C.CFlags * :
+	$(COMPILE_FLAGS_DEBUG)
+: debug ;
+
+######################################################################################################################
+
+C.C++Flags * : 
+	$(COMPILE_FLAGS)
+	-fvisibility-inlines-hidden
+	-fno-exceptions
+#	-fno-rtti	
+	;
+	
+C.C++Flags * :
+	$(COMPILE_FLAGS_DEBUG)
+: debug ;
+
+######################################################################################################################
+
+C.Defines * :
+	_PLAYBOOK
+	_FORTIFY_SOURCE=2
+	;
+	
+C.Defines * : _DEBUG : debug ;
+C.Defines * : NDEBUG : release ;
+C.Defines * : NDEBUG _FINAL : final ;
+
+######################################################################################################################
+
+C.LinkFlags * :
+	-Wl,--no-keep-memory 
+	-lang-c++
+	-w1 
+	-g
+	-Y_cpp-ne
+#	-fno-rtti
+	-fno-exceptions
+	-Wl,-z,relro
+	-Wl,-z,now
+	-Wl,--no-undefined
+	-Wl,--rpath-link . 
+	-Wl,--rpath-link C:/bbndk/0.9.4/target/qnx6/x86/lib 
+	-Wl,--rpath-link C:/bbndk/0.9.4/target/qnx6/x86/usr/lib
+	-Wl,--rpath=lib
+	;
+
+######################################################################################################################
+
+C.LinkDirectories * :
+	$(BBNDK://)/target/target-override/$(QCC_PLATFORM_DIR)/usr/lib
+	;
+
+######################################################################################################################
+# TODO : Currently links against GLES, dl (for opening the GLES dynamic library) and log (for log messages), as well
+# as the real basics libc, libstdc++, libm, libgcc. Also links against stlport.
+
+C.LinkPrebuiltLibraries * :
+	bps 
+	pps 
+	screen 
+	asound
+	EGL 
+	GLESv1_CM 
+	m 
+	stdc++
+	;
+
+######################################################################################################################
+
+C.IncludeDirectories * :
+	$(BBNDK://)/target/target-override/usr/include
+	;
+	
+######################################################################################################################
+
+VSPLATFORMMAP.playbookdevice	= "Playbook Device" ;
+VSPLATFORMMAP.playbooksimulator	= "Playbook Simulator" ;
+
+######################################################################################################################
+
+rule C._ApplicationFromObjects_LinkFlags
+{
+	local outputName = [ C._retrieveOutputName $(TARGET) ] ;
+	local bundlePath = $(outputPath)/$(outputName).app ;
+	BUNDLE_PATH on $(TARGET) = $(bundlePath) ;	
+	bundleExe = [ C.TargetGrist $(TARGET)|bundle : $(_linkTargets:S="") ] ;
+	MakeLocate $(bundleExe) : $(bundlePath) ;
+	BUNDLE_EXE on $(TARGET) = $(bundleExe) ;	
+	
+	local bundleTarget = $(TARGET):bundle ;
+	local cleanBundleTarget = clean:$(bundleTarget) ;
+	BUNDLE_TARGET on $(TARGET) = $(bundleTarget) ;
+	CLEAN_BUNDLE_TARGET on $(TARGET) = $(cleanBundleTarget) ;
+	Depends $(TARGET) : $(bundleTarget) ;
+	NotFile $(bundleTarget) ;
+	Depends clean:$(TARGET) : $(cleanBundleTarget) ;
+	NotFile $(cleanBundleTarget) ;
+	Always $(cleanBundleTarget) ;	
+}
+
+rule C.BundleInfo TARGET : TYPE : VALUE 
+{	
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	
+	switch $(TYPE:L)
+	{
+		case bundlename : on $(TARGET) BUNDLE_NAME = $(VALUE) ;
+	
+		case id : on $(TARGET) BUNDLE_ID = $(VALUE) ;
+		
+		case displayname : on $(TARGET) BUNDLE_DISPLAYNAME = $(VALUE) ;
+
+		case version : 
+			local _splitVersion = [ Split $(VALUE) : "." ] ;
+			if ! $(_splitVersion[1]) || ! $(_splitVersion[2]) || ! $(_splitVersion[3]) || ! $(_splitVersion[4])
+			{
+				Echo *** Error \: version supplied as $(VALUE) but should be in format major.minor.release.build ;
+				return ;
+			}
+			on $(TARGET) BUNDLE_VERSION_MAJOR	= $(_splitVersion[1]) ; 
+			on $(TARGET) BUNDLE_VERSION_MINOR	= $(_splitVersion[2]) ; 
+			on $(TARGET) BUNDLE_VERSION_RELEASE	= $(_splitVersion[3]) ; 
+			on $(TARGET) BUNDLE_VERSION_BUILD	= $(_splitVersion[4]) ; 
+			
+		case author : on $(TARGET) BUNDLE_AUTHOR = $(VALUE) ;
+		
+		case catagory : on $(TARGET) BUNDLE_CATAGORY = $(VALUE) ;
+		
+		case icon : on $(TARGET) BUNDLE_ICON = $(VALUE) ;	
+		
+		case splashscreen : on $(TARGET) BUNDLE_SPLASHSCREEN = $(VALUE) ;	
+	}
+}
+
+actions PlayBook.Strip
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	$(C.STRIP:TC\\) -s -o $(1:TC\\) $(2:TC\\)
+}
+
+rule GenerateXml TARGET : XML_TARGET
+{
+	# From C._ApplicationFromObjects_LinkFlags.
+	local bundlePath ;
+	local bundleExe ;
+	local bundleTarget ;
+	local cleanBundleTarget ;
+	
+	# From C.BundleInfo.
+	local bundleName ;
+	local bundleId ;
+	local bundleDisplayName ;
+	local bundleVersionMajor ;
+	local bundleVersionMinor ;
+	local bundleVersionRelease ;
+	local bundleVersionBuild ;
+	local bundleAuthor ;
+	local bundleCategory ;
+	local bundleIcon ;
+	local bundleSplashScreen ;
+	
+	# From higher up (c.jam perhaps).
+	local linkTarget ;
+	
+	on $(TARGET) {
+		bundlePath				= $(BUNDLE_PATH) ;
+		bundleExe				= $(BUNDLE_EXE) ;
+		bundleTarget			= $(BUNDLE_TARGET) ;
+		cleanBundleTarget		= $(CLEAN_BUNDLE_TARGET) ;
+		bundleName				= $(BUNDLE_NAME) ;
+		bundleId				= $(BUNDLE_ID) ;
+		bundleDisplayName		= $(BUNDLE_DISPLAYNAME) ;
+		bundleVersionMajor		= $(BUNDLE_VERSION_MAJOR) ;
+		bundleVersionMinor		= $(BUNDLE_VERSION_MINOR) ;
+		bundleVersionRelease	= $(BUNDLE_VERSION_RELEASE) ;
+		bundleVersionBuild		= $(BUNDLE_VERSION_BUILD) ;
+		bundleAuthor			= $(BUNDLE_AUTHOR) ;
+		bundleCategory			= $(BUNDLE_CATAGORY) ;
+		bundleIcon				= $(BUNDLE_ICON) ;
+		bundleSplashScreen		= $(BUNDLE_SPLASHSCREEN) ;
+		linkTarget				= $(LINK_TARGET) ;
+	}
+	
+	local _xmlContents = 
+"<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>
+<qnx xmlns=\"http://www.qnx.com/schemas/application/1.0\">
+	<id>$(bundleId)</id>
+	<name>$(bundleDisplayName)</name>
+	<versionNumber>$(bundleVersionMajor).$(bundleVersionMinor).$(bundleVersionRelease)</versionNumber>
+	<buildId>$(bundleVersionBuild)</buildId>
+	<author>$(bundleAuthor)</author>
+	<initialWindow>
+		<systemChrome>none</systemChrome>
+		<transparent>false</transparent>
+	</initialWindow>
+	<category>$(bundleCategory)</category>
+	<icon>
+		<image>$(bundleIcon)</image>
+	</icon>
+	<splashscreen>$(bundleSplashScreen)</splashscreen>
+	<action system=\"true\">run_native</action>
+	<action>play_audio</action>
+	<configuration id=\"$(bundleId)\" name=\"Device\">
+		<asset entry=\"true\" path=\"$(bundleExe:TCBS\\)\" type=\"Qnx/Elf\">$(bundleExe:TCBS\\)</asset>
+		<asset path=\"$(BBNDK:TC\\)\\target\\target-override\\$(QCC_PLATFORM_DIR)\\usr\\lib\\libbps.so\" type=\"Qnx/Elf\">lib/libbps.so.1</asset>
+		<asset path=\"$(BBNDK:TC\\)\\target\\target-override\\$(QCC_PLATFORM_DIR)\\usr\\lib\\libOpenAL.so\" type=\"Qnx/Elf\">lib/libOpenAL.so.1</asset>
+	</configuration>	
+</qnx>" ;
+
+	CONTENTS on $(XML_TARGET) = $(_xmlContents) ;
+	WriteFile $(XML_TARGET) ;
+	
+	UseCommandLine $(XML_TARGET) : $(_xmlContents) ;
+}
+
+# -installApp -launchApp -device 192.168.0.20 -password 5014D751
+actions response PlayBook.Package
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	$(BBNDK)\host\win32\x86\usr\bin\blackberry-nativepackager.orig.bat -package -target bar -devMode -debugToken "C:\Users\Rockthesmurf\AppData\Local\Research In Motion\debugtoken.bar" -platformArchitecture $(QCC_PLATFORM_DIR) $(1:TC\\) $(XML_TARGET:TC\\) -env LD_LIBRARY_PATH=app/native/lib -env LD_BIND_NOW=1 @@($(FILES_TO_DEPLOY))
+}
+
+rule PlayBook.Package BAR_FILE : BUNDLE_PATH : TARGET
+{
+	local _newLine = "
+" ;
+
+	local _fileList = [ BuildUpFileList $(TARGET) : $(BUNDLE_PATH) : "" : "" : "*" : "" ] ;
+
+	on $(BAR_FILE) {
+		local _file ;
+		for _file in $(_fileList)
+		{
+			if $(_file) && $(_file) != "" # && ( $(_file:S) = "" || $(_file:S) = ".ogg" || $(_file:BSL) = "icon.png" || $(_file:BSL) = "splashscreen.png" )
+			{
+				FILES_TO_DEPLOY += -e $(BUNDLE_PATH)/$(_file) $(_file) ;
+			}
+		}
+		# Also add libs.
+		FILES_TO_DEPLOY += -e $(BBNDK:TC\\)\\target\\target-override\\$(QCC_PLATFORM_DIR)\\usr\\lib\\libbps.so lib/libbps.so.1 ;
+		FILES_TO_DEPLOY += -e $(BBNDK:TC\\)\\target\\target-override\\$(QCC_PLATFORM_DIR)\\usr\\lib\\libOpenAL.so lib/libOpenAL.so.1 ;
+		FILES_TO_DEPLOY = $(FILES_TO_DEPLOY:J=$(_newLine)) ;
+	}
+	
+	UseCommandLine $(BAR_FILE) : $(FILES_TO_DEPLOY) ;
+}
+
+rule C._ApplicationFromObjects_PostBuild
+{
+	# From C._ApplicationFromObjects_LinkFlags.
+	local bundlePath ;
+	local bundleExe ;
+	local bundleTarget ;
+	local cleanBundleTarget ;
+	
+	# From C.BundleInfo.
+	local bundleName ;
+	local bundleId ;
+	local bundleDisplayName ;
+	local bundleVersionMajor ;
+	local bundleVersionMinor ;
+	local bundleVersionRelease ;
+	local bundleVersionBuild ;
+	local bundleAuthorName ;
+	local bundleCategory ;
+	local bundleIcon ;
+	
+	# From higher up (c.jam perhaps).
+	local linkTarget ;
+	
+	on $(TARGET) {
+		bundlePath				= $(BUNDLE_PATH) ;
+		bundleExe				= $(BUNDLE_EXE) ;
+		bundleTarget			= $(BUNDLE_TARGET) ;
+		cleanBundleTarget		= $(CLEAN_BUNDLE_TARGET) ;
+		bundleName				= $(BUNDLE_NAME) ;
+		bundleId				= $(BUNDLE_ID) ;
+		bundleDisplayName		= $(BUNDLE_DISPLAYNAME) ;
+		bundleVersionMajor		= $(BUNDLE_VERSION_MAJOR) ;
+		bundleVersionMinor		= $(BUNDLE_VERSION_MINOR) ;
+		bundleVersionRelease	= $(BUNDLE_VERSION_RELEASE) ;
+		bundleVersionBuild		= $(BUNDLE_VERSION_BUILD) ;
+		bundleAuthorName		= $(BUNDLE_AUTHOR) ;
+		bundleCategory			= $(BUNDLE_CATAGORY) ;
+		bundleIcon				= $(BUNDLE_ICON) ;
+		linkTarget				= $(LINK_TARGET) ;
+	}
+	
+	# bar-descriptor.xml file.
+	local _xmlTarget = [ C.TargetGrist $(TARGET) : bar-descriptor.xml ] ;
+	MakeLocate $(_xmlTarget) : $(LOCATE_TARGET) ;	
+	
+	# Generate.
+	GenerateXml $(TARGET) : $(_xmlTarget) ;
+	
+	# Setup dependencies.
+	Depends $(bundleTarget) : $(_xmlTarget) ;
+	Clean $(cleanBundleTarget) : $(_xmlTarget) ;	
+	
+	# Bundle icon.
+	local _bundleIcon = [ C.TargetGrist $(TARGET) : $(bundleIcon) ] ;
+	MakeLocate $(_bundleIcon) : $(bundlePath) ;	
+	
+	# Bundle exe.
+	Depends $(bundleExe) : $(linkTarget) ;
+	PlayBook.Strip $(bundleExe) : $(linkTarget) ;
+	
+	Depends $(bundleTarget) : $(bundleExe) ;
+	Depends $(TARGET) : $(bundleExe) ;
+	Clean $(cleanBundleTarget) : $(bundleExe) ;	
+	
+	# Final bar.
+	local finalBar = [ C.TargetGrist $(TARGET) : $(bundleName).BAR ] ;
+	MakeLocate $(finalBar) : $(LOCATE_TARGET) ;	
+	Depends $(finalBar) : $(bundleTarget) ;
+	Depends $(finalBar) : $(_xmlTarget) ;
+	Depends $(finalBar)	: $(_bundleIcon) ;
+			
+	XML_TARGET on $(finalBar) = $(_xmlTarget) ;
+	ICON_TARGET on $(finalBar) = $(_bundleIcon) ;
+	BUNDLE_PATH on $(finalBar) = $(bundlePath) ;
+	BUNDLE_EXE on $(finalBar) = $(bundleExe) ;
+	PlayBook.Package $(finalBar) : $(bundlePath) : $(TARGET) ;
+
+	Depends $(TARGET) : $(finalBar) ;
+	Clean $(cleanBundleTarget) : $(finalBar) ;	
+}
+
+######################################################################################################################
+# Using custom C.Link as we need to specify the exectuable name as part of the flags, and using custom rules for
+# everything else as we need to do some cygwin setup first. Ideally we'd share the actions in g-gcc and just do our
+# cygwin setup first, but I'm not sure if that is possible to do right now.
+
+actions response C.Link
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	"$(C.LINK)" $(LINKFLAGS) $(>:C) $(NEEDLIBS:CT) $(LINKLIBS:CT) -o $(<[1]:C)
+}
+
+actions updated together piecemeal response C.Archive
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	"$(C.AR)" @@($(LIBFLAGS) $(<:C) $(>:C))
+}
+
+actions together C.Ranlib
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	"$(C.RANLIB)" $(<:C)
+}
+
+if $(NOARUPDATE)
+{
+	actions response C.Archive
+	{
+		CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+		"$(C.AR)" $(LIBFLAGS) -A $(<:C) $(>:C)
+	}
+}
+
+actions updated response C.CC
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	CD /D $(<[0]:D\\C)
+	"$(C.CC)" -c $(MFLAGS) $(>:C)
+}
+
+actions updated response C.C++
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	CD /D $(<[0]:D\\C)
+	"$(C.C++)" -c $(MFLAGS) $(>:C)
+}
+
+actions updated response C.PCH
+{
+	CALL $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	"$(C.C++)" -c $(MFLAGS) $(>:C)
+}
+
+######################################################################################################################
