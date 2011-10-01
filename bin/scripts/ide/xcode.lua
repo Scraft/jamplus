@@ -173,17 +173,19 @@ local function XcodeHelper_GetProjectExportInfo(projectName)
 				project.ConfigInfo[platformName][configName] = configInfo
 			end
 
-			if configInfo.Defines == ''  and  project.Defines then
+			if configInfo and project then
+				if configInfo.Defines == ''  and  project.Defines  and  project.Defines[platformName] then
 				configInfo.Defines = table.concat(project.Defines[platformName][configName], ';'):gsub('"', '\\&quot;')
 			end
-			if configInfo.IncludePaths == ''  and  project.IncludePaths then
+				if configInfo.IncludePaths == ''  and  project.IncludePaths and project.Includes[platformName] then
 				configInfo.Includes = table.concat(project.IncludePaths[platformName][configName], ';')
 			end
-			if configInfo.OutputPath == ''  and  project.OutputPaths then
+				if configInfo.OutputPath == ''  and  project.OutputPaths and project.OutputPaths[platformName] then
 				configInfo.OutputPath = project.OutputPaths[platformName][configName]
 			end
-			if configInfo.OutputName == ''  and  project.OutputNames then
+				if configInfo.OutputName == ''  and  project.OutputNames and project.OutputNames[platformName] then
 				configInfo.OutputName = project.OutputNames[platformName][configName]
+				end
 			end
 		end
 	end
