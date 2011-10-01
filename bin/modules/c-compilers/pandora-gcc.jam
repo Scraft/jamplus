@@ -1,10 +1,11 @@
 ######################################################################################################################
 
 C.AR			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-ar.exe" ru ;
-C.CC			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-gcc.exe" ;
+C.CC			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
 C.C++			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
 C.LINK			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
 C.RANLIB		?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-ranlib.exe" ;
+C.STRIP			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-strip.exe" ;
 
 ######################################################################################################################
 # Our 'exe' is actually a shared lib, so make extension .so file.
@@ -97,8 +98,10 @@ C.LinkFlags * :
 	-Wl,--no-whole-archive
 	-Wl,--no-undefined
 	-g
-	-lstdc++
 	-lrt
+#	-lstdc++
+	-static-libstdc++
+#	-Wl,-Bstatic -lstdc++ -Wl,-Bdynamic
 	-Wl,-rpath=libs
 	;
 
@@ -119,15 +122,365 @@ C.LinkPrebuiltLibraries * :
 VSPLATFORMMAP.pandora = "Pandora" ;
 
 ######################################################################################################################
+
+rule C._ApplicationFromObjects_LinkFlags
+{
+	local outputName = [ C._retrieveOutputName $(TARGET) ] ;
+	local bundlePath = $(outputPath)/$(outputName).app ;
+	BUNDLE_PATH on $(TARGET) = $(bundlePath) ;	
+	bundleExe = [ C.TargetGrist $(TARGET)|bundle : $(_linkTargets:S="") ] ;
+	MakeLocate $(bundleExe) : $(bundlePath) ;
+	BUNDLE_EXE on $(TARGET) = $(bundleExe) ;	
+	
+	local bundleTarget = $(TARGET):bundle ;
+	local cleanBundleTarget = clean:$(bundleTarget) ;
+	BUNDLE_TARGET on $(TARGET) = $(bundleTarget) ;
+	CLEAN_BUNDLE_TARGET on $(TARGET) = $(cleanBundleTarget) ;
+	Depends $(TARGET) : $(bundleTarget) ;
+	NotFile $(bundleTarget) ;
+	Depends clean:$(TARGET) : $(cleanBundleTarget) ;
+	NotFile $(cleanBundleTarget) ;
+	Always $(cleanBundleTarget) ;	
+}
+
+rule C.BundleInfo TARGET : TYPE : VALUE 
+{	
+	TARGET = [ _retrieveActiveTargetName $(TARGET) ] ;
+	
+	switch $(TYPE:L)
+	{
+		case title :	
+			local _region = "en_US" ;
+			local _title = "untitled" ;
+			if $(VALUE[2])
+			{
+				# User supplied two tokens, both region and title.
+				_region	= $(VALUE[1]) ;
+				_title	= $(VALUE[2]) ;
+			}
+			else
+			{
+				# User supplied a single token, a title, so use default region.
+				_title	= $(VALUE[1]) ;
+			}
+			on $(TARGET) BUNDLE_TITLE += $(_region)|$(_title) ;	
+			
+		case description :	
+			local _region = "en_US" ;
+			local _description = "untitled" ;
+			if $(VALUE[2])
+			{
+				# User supplied two tokens, both region and title.
+				_region	= $(VALUE[1]) ;
+				_description	= $(VALUE[2]) ;
+			}
+			else
+			{
+				# User supplied a single token, a title, so use default region.
+				_description	= $(VALUE[1]) ;
+			}
+			on $(TARGET) BUNDLE_DESCRIPTION += $(_region)|$(_description) ;	
+					
+		case id : on $(TARGET) BUNDLE_ID = $(VALUE) ;	
+		
+		case bundlename : on $(TARGET) BUNDLE_NAME = $(VALUE) ;
+			
+		case version : 
+			local _splitVersion = [ Split $(VALUE) : "." ] ;
+			if ! $(_splitVersion[1]) || ! $(_splitVersion[2]) || ! $(_splitVersion[3]) || ! $(_splitVersion[4])
+			{
+				Echo *** Error \: version supplied as $(VALUE) but should be in format major.minor.release.build ;
+				return ;
+			}
+			on $(TARGET) BUNDLE_VERSION_MAJOR	= $(_splitVersion[1]) ; 
+			on $(TARGET) BUNDLE_VERSION_MINOR	= $(_splitVersion[2]) ; 
+			on $(TARGET) BUNDLE_VERSION_RELEASE	= $(_splitVersion[3]) ; 
+			on $(TARGET) BUNDLE_VERSION_BUILD	= $(_splitVersion[4]) ; 
+			
+		case author-name : on $(TARGET) BUNDLE_AUTHOR-NAME = $(VALUE) ;
+		case author-website : on $(TARGET) BUNDLE_AUTHOR-WEBSITE = $(VALUE) ;
+		case author-email : on $(TARGET) BUNDLE_AUTHOR-EMAIL = $(VALUE) ;
+		
+		case icon : on $(TARGET) BUNDLE_ICON = $(VALUE) ;	
+		
+		case previewpics : on $(TARGET) BUNDLE_PREVIEW_PICS = $(VALUE) ;
+		
+		case catagories : on $(TARGET) BUNDLE_CATAGORIES = $(VALUE) ;
+	}
+}
+
+actions Pandora.Strip
+{
+	$(C.STRIP:TC\\) -s -o $(1:TC\\) $(2:TC\\)
+}
+
+actions Pandora.PackageSquashFs
+{
+	IF EXIST $(1:TC\\S=.squash). ( DEL $(1:TC\\S=.squash) )
+	SET CYGWIN=nodosfilewarning & $(MKSQUASHFS:TC\\) $(BUNDLE_PATH:TC\\) $(1:TC\\S=.squash) -nopad -no-recovery -no-progress -noappend -no-xattrs
+	COPY $(1:TC\\S=.squash) /B + $(PXML_TARGET:TC\\) /B $(1:TC\\S=.stage2) /B /Y > NUL
+	COPY $(1:TC\\S=.stage2) /B + $(ICON_TARGET:TC\\) /B $(1:TC\\) /B /Y > NUL
+}
+
+actions Pandora.Package
+{
+	$(MKISOFS:TC\\) -quiet -m "*PiGame.xml" -m "*SaveSlot*.*" -r -o $(1:TC\\S=.iso) -R $(BUNDLE_PATH:TC\\)
+	COPY $(1:TC\\S=.iso) /B + $(PXML_TARGET:TC\\) /B $(1:TC\\S=.stage2) /B /Y > NUL
+	COPY $(1:TC\\S=.stage2) /B + $(ICON_TARGET:TC\\) /B $(1:TC\\) /B /Y > NUL
+}
+
+rule GeneratePxml TARGET : PXML_TARGET
+{
+	local bundleTitle ;
+	local bundleDescription ;
+	local bundleId ;
+	local bundleName ;
+	local bundleVersionMajor ;
+	local bundleVersionMinor ;
+	local bundleVersionRelease ;
+	local bundleVersionBuild ;
+	local bundleAuthorName ;
+	local bundleAuthorWebsite ;
+	local authorEmail ;
+	local bundleIcon ;
+	local bundlePreviewPics ;
+	local bundleCatagories ;
+	local bundleExe ;
+	
+	on $(TARGET) {
+		bundleTitle = $(BUNDLE_TITLE) ;
+		bundleDescription = $(BUNDLE_DESCRIPTION) ;
+		bundleId = $(BUNDLE_ID) ;
+		bundleName = $(BUNDLE_NAME) ;
+		bundleVersionMajor		= $(BUNDLE_VERSION_MAJOR) ;
+		bundleVersionMinor		= $(BUNDLE_VERSION_MINOR) ;
+		bundleVersionRelease	= $(BUNDLE_VERSION_RELEASE) ;
+		bundleVersionBuild		= $(BUNDLE_VERSION_BUILD) ;
+		bundleAuthorName		= $(BUNDLE_AUTHOR-NAME) ;
+		bundleAuthorWebsite		= $(BUNDLE_AUTHOR-WEBSITE) ;
+		bundleAuthorEmail		= $(BUNDLE_AUTHOR-EMAIL) ;
+		bundleIcon				= $(BUNDLE_ICON) ;
+		bundlePreviewPics		= $(BUNDLE_PREVIEW_PICS) ;
+		bundleCatagories		= $(BUNDLE_CATAGORIES) ;
+		bundleExe = $(BUNDLE_EXE) ;
+	}
+
+	# Titles section.
+	local _titlesSection = "" ;
+	local _title ;
+	local _mainTitle = "" ;
+	for _title in $(bundleTitle)
+	{
+		local _split = [ Split $(_title) : "|" ] ;
+		if $(_mainTitle) = ""
+		{
+			_mainTitle = $(_split[2]) ;
+		}
+		else if $(_split[1]) = "en_US"
+		{
+			_mainTitle = $(_split[2]) ;
+		}
+		_titlesSection +=
+"			<title lang=\"$(_split[1])\">$(_split[2])</title>
+" ;
+	}
+	
+	# Descriptions section.
+	local _descriptionsSection ;
+	local _description ;
+	local _mainDescription = "" ;
+	for _description in $(bundleDescription)
+	{
+		local _split = [ Split $(_description) : "|" ] ;
+		if $(_mainDescription) = ""
+		{
+			_mainDescription = $(_split[2]) ;
+		}
+		else if $(_split[1]) = "en_US"
+		{
+			_mainDescription = $(_split[2]) ;
+		}		
+		_descriptionsSection +=
+"			<description lang=\"$(_split[1])\">$(_split[2])</description>
+" ;
+	}
+	
+	# Preview pics section.
+	local _previewPicsSection ;
+	local _previewPic ;
+	for _previewPic in $(bundlePreviewPics)
+	{
+		_previewPicsSection +=
+"			<pic src=\"$(_previewPic)\"/>
+" ;
+	}
+	
+	# Catagories section.
+	local _catagoriesSection ;
+	local _category ;
+	for _category in $(bundleCatagories)
+	{
+		local _catSubCat = [ Split $(_category) : ":" ] ;
+		local _cat		= $(_catSubCat[1]) ;
+				
+		if $(_catagoriesSection) != ""
+		{
+			_catagoriesSection += "
+" ;
+		}
+				
+		_catagoriesSection +=
+"			<category name=\"$(_cat)\">
+" ;
+		
+		local _subCats	= [ Split $(_catSubCat[2]) : "|" ] ;
+		local _subCat ;
+		for _subCat in $(_subCats)
+		{
+		_catagoriesSection +=
+"				<subcategory name=\"$(_subCat)\"/>
+" ;		
+		}
+		
+		_catagoriesSection +=
+"			</category>" ;
+	}	
+	
+	local _pxmlContents =
+"<PXML xmlns=\"http://openpandora.org/namespaces/PXML\">
+	<package id=\"$(bundleId)\">
+		<version major=\"$(bundleVersionMajor)\" minor=\"$(bundleVersionMinor)\" release=\"$(bundleVersionRelease)\" build=\"$(bundleVersionBuild)\"/>
+		<author name=\"$(bundleAuthorName)\" website=\"$(bundleAuthorWebsite)\" email=\"$(bundleAuthorEmail)\"/>
+		<titles>
+" ;
+	_pxmlContents += $(_titlesSection) ;
+	_pxmlContents +=
+"		</titles>
+		<descriptions>
+" ;
+	_pxmlContents += $(_descriptionsSection) ;
+	_pxmlContents +=
+"		</descriptions>
+		<icon src=\"$(bundleIcon)\"/>
+	</package>
+	<application id=\"$(bundleId)\">
+		<exec command=\"./$(bundleExe:TC\\D="")\" x11=\"req\"/>
+		<version major=\"$(bundleVersionMajor)\" minor=\"$(bundleVersionMinor)\" release=\"$(bundleVersionRelease)\" build=\"$(bundleVersionBuild)\"/>
+		<author name=\"$(bundleAuthorName)\" website=\"$(bundleAuthorWebsite)\" email=\"$(bundleAuthorEmail)\"/>
+		<titles>
+" ;
+	_pxmlContents += $(_titlesSection) ;
+	_pxmlContents +=
+"		</titles>
+		<title lang=\"en_US\">$(_mainTitle)</title>
+		<!--
+			Extra block for compatibility with OS versions before HF6
+		-->
+		<descriptions>
+" ;
+	_pxmlContents += $(_descriptionsSection) ;
+	_pxmlContents +=
+"		</descriptions>
+		<description lang=\"en_US\">$(_mainDescription)</description>
+		<!--
+			Extra block for compatibility with OS versions before HF6
+		-->	
+		<icon src=\"$(bundleIcon)\"/>
+		<licenses>
+			<license name=\"Commercial, not for redistribution.\"/>
+		</licenses>	
+		<previewpics>
+" ;
+	_pxmlContents += $(_previewPicsSection) ;
+	_pxmlContents +=
+"		</previewpics>
+		<categories>
+" ;
+	_pxmlContents += $(_catagoriesSection) ;
+	_pxmlContents += "
+		</categories>
+	</application>
+</PXML>
+" ;
+		
+	CONTENTS on $(PXML_TARGET) = $(_pxmlContents) ;
+	WriteFile $(PXML_TARGET) ;
+	
+	UseCommandLine $(PXML_TARGET) : $(_pxmlContents) ;
+}
+
+rule C._ApplicationFromObjects_PostBuild
+{
+	local bundlePath ;
+	local bundleTarget ;
+	local bundleName ;
+	local bundleIcon ;
+	local cleanBundleTarget ;
+	local bundleExe ;
+	local linkTarget ;
+	on $(TARGET) {
+		bundlePath = $(BUNDLE_PATH) ;
+		bundleTarget = $(BUNDLE_TARGET) ;
+		bundleName = $(BUNDLE_NAME) ;
+		bundleIcon				= $(BUNDLE_ICON) ;
+		cleanBundleTarget = $(CLEAN_BUNDLE_TARGET) ;
+		bundleExe = $(BUNDLE_EXE) ;
+		linkTarget = $(LINK_TARGET) ;
+	}	
+	
+	# PXML file.
+	local _pxmlTarget = [ C.TargetGrist $(TARGET) : $(bundleName).pxml ] ;
+	MakeLocate $(_pxmlTarget) : $(LOCATE_TARGET) ;	
+	
+	# Generate.
+	GeneratePxml $(TARGET) : $(_pxmlTarget) ;
+	
+	# Setup dependencies.
+	Depends $(bundleTarget) : $(_pxmlTarget) ;
+	Clean $(cleanBundleTarget) : $(_pxmlTarget) ;	
+	
+	# Bundle icon.
+	local _bundleIcon = [ C.TargetGrist $(TARGET) : $(bundleIcon) ] ;
+	MakeLocate $(_bundleIcon) : $(bundlePath) ;	
+	
+	# Bundle exe.
+	Depends $(bundleExe) : $(linkTarget) ;
+	Pandora.Strip $(bundleExe) : $(linkTarget) ;
+	
+	Depends $(bundleTarget) : $(bundleExe) ;
+	Depends $(TARGET) : $(bundleExe) ;
+	Clean $(cleanBundleTarget) : $(bundleExe) ;	
+	
+	# Final PND.
+	local finalPnd = [ C.TargetGrist $(TARGET) : $(bundleName).pnd ] ;
+	MakeLocate $(finalPnd) : $(LOCATE_TARGET) ;	
+	Depends $(finalPnd) : $(bundleTarget) ;
+	Depends $(finalPnd) : $(_pxmlTarget) ;
+	Depends $(finalPnd)	: $(_bundleIcon) ;
+	
+				
+	PXML_TARGET on $(finalPnd) = $(_pxmlTarget) ;
+	ICON_TARGET on $(finalPnd) = $(_bundleIcon) ;
+	BUNDLE_PATH on $(finalPnd) = $(bundlePath) ;
+	Pandora.Package $(finalPnd) ;
+	
+	Depends $(TARGET) : $(finalPnd) ;
+	Clean $(cleanBundleTarget) : $(finalPnd) ;	
+}
+
+######################################################################################################################
+
+######################################################################################################################
 # Using custom C.Link as we need to specify the exectuable name as part of the flags, and using custom rules for
 # everything else as we need to do some cygwin setup first. Ideally we'd share the actions in g-gcc and just do our
 # cygwin setup first, but I'm not sure if that is possible to do right now.
 
 # Tell cygwin not to moan about DOS filenames, and put cygwin's bin folder on the path so it can find cygwin1.dll
+# CYGWIN_SETUP = "SET CYGWIN=nodosfilewarning & SET PATH=%PATH%;%CYGWIN_PATH%\\bin" ;
 
 actions response C.Link
 {
-	"$(C.LINK)" -Wl,-soname,$(<[1]:CBS) @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:T) $(LINKLIBS)) -o $(<[1]:C)
+	"$(C.LINK)" -Wl,-soname,$(<[1]:CBS) @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:TC)) -o $(<[1]:C)
 }
 
 actions updated together piecemeal response C.Archive
@@ -140,20 +493,21 @@ actions together C.Ranlib
 	"$(C.RANLIB)" $(<:C)
 }
 
-actions response C.Archive
+if $(NOARUPDATE)
 {
-	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
+	actions response C.Archive
+	{
+		"$(C.AR)" @@($(LIBFLAGS) $(<:C)) $(>:C)
+	}
 }
 
 actions updated response C.CC
 {
-	CD /D $(<[1]:CD\\)
 	"$(C.CC)" @@(-c $(MFLAGS)) $(>:C)
 }
 
 actions updated response C.C++
 {
-	CD /D $(<[1]:CD\\)
 	"$(C.C++)" @@(-c $(MFLAGS)) $(>:C)
 }
 

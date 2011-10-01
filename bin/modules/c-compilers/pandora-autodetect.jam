@@ -20,6 +20,22 @@ rule C.AutoDetect
 		return ;
 	}
 	
+	# 3. MKISOFS
+	MKISOFS = $(MKISOFS:J=" ") ;
+	if ! $(MKISOFS)
+	{
+		Echo *** Warning \: MKISOFS environment variable not found, Pandora platform requires this ;
+		return ;
+	}
+	
+	# 4. MKSQUASHFS
+	MKSQUASHFS = $(MKSQUASHFS:J=" ") ;
+	if ! $(MKSQUASHFS)
+	{
+		Echo *** Warning \: MKSQUASHFS environment variable not found, Pandora platform requires this ;
+		return ;
+	}
+	
 	# Set platform
 	COMPILER.$(PLATFORM) = pandora ;
 
