@@ -2,3 +2,4 @@ C.Flags CC	: * : -g -O2 : release : ipad ;
 C.Flags C++	: *	: -g -O2 : release : ipad ;
 C.Flags M	: *	: -g -O2 : release : ipad ;
 C.Flags MM	: *	: -g -O2 : release : ipad ;
+C.SetTaskAllow * : true ;
