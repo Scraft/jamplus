@@ -315,6 +315,12 @@ cmd_string(
 		    ((char*)ine)[0] = save;
 
 		    file = fopen(buffer_ptr( &subbuff ), "wb");
+			if ( ! file )
+			{
+				printf("jam: failed to open %s", buffer_ptr( &subbuff ) );
+				buffer_free( &subbuff );
+				exit(EXITBAD);
+			}
 		    buffer_free( &subbuff );
 
 		    ine++;
