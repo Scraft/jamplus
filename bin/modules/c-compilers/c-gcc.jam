@@ -73,16 +73,19 @@ rule C._LinkPrebuiltLibraries
 
 actions updated together piecemeal C.Archive
 {
+	cd $(1:DP:/)
 	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
 }
 
 actions C.Link
 {
+	cd $(1:DP:/)
 	"$(C.LINK)" $(LINKFLAGS) -o $(<[1]:C) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:T)
 }
 
 actions together C.Ranlib
 {
+	cd $(1:DP:/)
 	"$(C.RANLIB)" $(<:C)
 }
 
@@ -94,22 +97,26 @@ if $(NOARUPDATE)
 {
 	actions C.Archive
 	{
+		cd $(1:DP:/)
 	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
 	}
 }
 
 actions updated response C.CC
 {
+	cd $(1:DP:/)
 	"$(C.CC)" -c $(MFLAGS) $(>:C)
 }
 
 actions updated response C.C++
 {
+	cd $(1:DP:/)
 	"$(C.C++)" -c $(MFLAGS) $(>:C)
 }
 
 actions updated response C.PCH
 {
+	cd $(1:DP:/)
 	"$(C.C++)" -c $(MFLAGS) $(>:C)
 }
 
