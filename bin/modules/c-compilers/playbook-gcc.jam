@@ -33,7 +33,7 @@ rule C.FLibraryPaths { return -L\"$(<)\" ; }
 # Rule to force include a given file when compiling.
 rule C._ForceIncludeFlagHelper TARGETS : INCLUDE
 {
-	return "-Wc,-include$(INCLUDE:TCBS) -I$(INCLUDE:TCD)" ;
+	return -Wc,-include$(INCLUDE:TCBS) -I$(INCLUDE:TCD) ;
 }
 
 ######################################################################################################################
