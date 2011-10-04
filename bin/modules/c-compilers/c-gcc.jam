@@ -55,7 +55,7 @@ rule C.FLibraryPaths { return -L$(<) ; }
 # Rule to force include a given file when compiling.
 rule C._ForceIncludeFlagHelper TARGETS : INCLUDE
 {
-	return "-include $(INCLUDE:C)" ;
+	return "-include $(INCLUDE:TC/)" ;
 }
 
 rule C._LinkPrebuiltLibraries
@@ -73,19 +73,19 @@ rule C._LinkPrebuiltLibraries
 
 actions updated together piecemeal C.Archive
 {
-	cd $(1:DP:/)
+	SET CYGWIN=nodosfilewarning
 	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
 }
 
 actions C.Link
 {
-	cd $(1:DP:/)
+	SET CYGWIN=nodosfilewarning
 	"$(C.LINK)" $(LINKFLAGS) -o $(<[1]:C) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:T)
 }
 
 actions together C.Ranlib
 {
-	cd $(1:DP:/)
+	SET CYGWIN=nodosfilewarning
 	"$(C.RANLIB)" $(<:C)
 }
 
@@ -97,26 +97,26 @@ if $(NOARUPDATE)
 {
 	actions C.Archive
 	{
-		cd $(1:DP:/)
+		SET CYGWIN=nodosfilewarning
 	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
 	}
 }
 
 actions updated response C.CC
 {
-	cd $(1:DP:/)
+	SET CYGWIN=nodosfilewarning
 	"$(C.CC)" -c $(MFLAGS) $(>:C)
 }
 
 actions updated response C.C++
 {
-	cd $(1:DP:/)
+	SET CYGWIN=nodosfilewarning
 	"$(C.C++)" -c $(MFLAGS) $(>:C)
 }
 
 actions updated response C.PCH
 {
-	cd $(1:DP:/)
+	SET CYGWIN=nodosfilewarning
 	"$(C.C++)" -c $(MFLAGS) $(>:C)
 }
 
@@ -164,7 +164,7 @@ rule C._MultiCppCompile_SetupFlags
 		{
 			_outputSymbol = -o ;
 			_pchOutputFilenameModifiers = T ;
-			_pchIncludeFilenameModifiers = TCS= ;
+			_pchIncludeFilenameModifiers = S= ;
 			
 			_flags += -Winvalid-pch ;
 		}
@@ -217,7 +217,7 @@ rule C._MultiCppCompile_SetupFlags
 		_flags += [ C._ForceIncludeFlagHelper $(TARGET) : $(objectForceIncludes:G=) ] ;
 	}
 
-	if ! ( $(PF) in wii ps3 )
+	if ! ( $(PLATFORM) in wii ps3 ps3sn ps3gcc )
 	{
 		_flags += "-o \"$(_obj:T)\"" ;
 	
