@@ -2,6 +2,7 @@ C.Flags CC	: * : -g -O2 : adhoc : ipadsimulator ;
 C.Flags C++	: *	: -g -O2 : adhoc : ipadsimulator ;
 C.Flags M	: *	: -g -O2 : adhoc : ipadsimulator ;
 C.Flags MM	: *	: -g -O2 : adhoc : ipadsimulator ;
+C.Defines * : _FINAL : adhoc : ipadsimulator ;
 C.SetTaskAllow * : false ;
 
 VSCONFIGMAP.adhoc = AdHoc ;

@@ -2,6 +2,7 @@ C.Flags CC	: * : -g -O2 : distribution : ipadsimulator ;
 C.Flags C++	: *	: -g -O2 : distribution : ipadsimulator ;
 C.Flags M	: *	: -g -O2 : distribution : ipadsimulator ;
 C.Flags MM	: *	: -g -O2 : distribution : ipadsimulator ;
+C.Defines * : _FINAL : distribution : ipadsimulator ;
 C.SetTaskAllow * : false ;
 
 VSCONFIGMAP.distribution = Distribution ;

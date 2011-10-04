@@ -2,6 +2,7 @@ C.Flags CC	: * : -g -O2 : adhoc : ipad ;
 C.Flags C++	: *	: -g -O2 : adhoc : ipad ;
 C.Flags M	: *	: -g -O2 : adhoc : ipad ;
 C.Flags MM	: *	: -g -O2 : adhoc : ipad ;
+C.Defines * : _FINAL : adhoc : ipad ;
 C.SetTaskAllow * : false ;
 
 VSCONFIGMAP.adhoc = AdHoc ;

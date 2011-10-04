@@ -2,6 +2,7 @@ C.Flags CC	: * : -g -Os : adhoc : iphone ;
 C.Flags C++	: *	: -g -Os : adhoc : iphone ;
 C.Flags M	: *	: -g -Os : adhoc : iphone ;
 C.Flags MM	: *	: -g -Os : adhoc : iphone ;
+C.Defines * : _FINAL : adhoc : iphone ;
 C.SetTaskAllow * : false ;
 
 VSCONFIGMAP.adhoc = AdHoc ;

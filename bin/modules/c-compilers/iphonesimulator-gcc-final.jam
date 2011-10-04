@@ -2,6 +2,7 @@ C.Flags CC	: * : -g -O2 : final : iphonesimulator ;
 C.Flags C++	: *	: -g -O2 : final : iphonesimulator ;
 C.Flags M	: *	: -g -O2 : final : iphonesimulator ;
 C.Flags MM	: *	: -g -O2 : final : iphonesimulator ;
+C.Defines * : _FINAL : final : iphonesimulator ;
 C.SetTaskAllow * : true ;
 
 VSCONFIGMAP.final = Final ;
