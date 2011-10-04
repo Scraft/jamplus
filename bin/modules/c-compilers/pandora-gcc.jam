@@ -1,7 +1,7 @@
 ######################################################################################################################
 
 C.AR			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-ar.exe" ru ;
-C.CC			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
+C.CC			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-gcc.exe" ;
 C.C++			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
 C.LINK			?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-g++.exe" ;
 C.RANLIB		?= "$(CODESOURCERY_ROOT)\\bin\\arm-none-linux-gnueabi-ranlib.exe" ;
