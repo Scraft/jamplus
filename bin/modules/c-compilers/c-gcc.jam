@@ -73,19 +73,16 @@ rule C._LinkPrebuiltLibraries
 
 actions updated together piecemeal C.Archive
 {
-	SET CYGWIN=nodosfilewarning
 	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
 }
 
 actions C.Link
 {
-	SET CYGWIN=nodosfilewarning
 	"$(C.LINK)" $(LINKFLAGS) -o $(<[1]:C) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:T)
 }
 
 actions together C.Ranlib
 {
-	SET CYGWIN=nodosfilewarning
 	"$(C.RANLIB)" $(<:C)
 }
 
@@ -97,26 +94,22 @@ if $(NOARUPDATE)
 {
 	actions C.Archive
 	{
-		SET CYGWIN=nodosfilewarning
-	"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
+		"$(C.AR)" $(LIBFLAGS) $(<:C) $(>:C)
 	}
 }
 
 actions updated response C.CC
 {
-	SET CYGWIN=nodosfilewarning
 	"$(C.CC)" -c $(MFLAGS) $(>:C)
 }
 
 actions updated response C.C++
 {
-	SET CYGWIN=nodosfilewarning
 	"$(C.C++)" -c $(MFLAGS) $(>:C)
 }
 
 actions updated response C.PCH
 {
-	SET CYGWIN=nodosfilewarning
 	"$(C.C++)" -c $(MFLAGS) $(>:C)
 }
 
@@ -220,8 +213,8 @@ rule C._MultiCppCompile_SetupFlags
 	if ! ( $(PLATFORM) in wii ps3 ps3sn ps3gcc )
 	{
 		_flags += "-o \"$(_obj:T)\"" ;
-	
-		if $(C_LIBRARY_SHARED_MODULE) 
+
+		if $(C_LIBRARY_SHARED_MODULE)
 		{
 			_flags += -fPIC ;
 		}
