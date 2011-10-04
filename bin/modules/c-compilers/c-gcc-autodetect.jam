@@ -4,7 +4,12 @@ rule FindGCC
 		$(PATH)
 	;
 
-	local gcc = [ Glob $(PATHS) : gcc ] ;
+	local _toFind = gcc ;
+	if $(OS) = NT
+	{
+		_toFind = *gcc.exe ;
+	}
+	local gcc = [ Glob $(PATHS) : $(_toFind) ] ;
 	if ! $(gcc)
 	{
 		return ;
