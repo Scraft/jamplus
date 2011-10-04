@@ -1,8 +1,11 @@
-C.AR			?= nacl-ar ru ;
-C.CC			?= nacl-gcc ;
-C.C++			?= nacl-g++ ;
-C.LINK			?= nacl-g++ ;
-C.RANLIB		?= nacl-ranlib ;
+C.AR			?= $(GCC_ROOT)/nacl-ar ru ;
+C.CC			?= $(GCC_ROOT)/nacl-gcc ;
+C.C++			?= $(GCC_ROOT)/nacl-g++ ;
+C.LINK			?= $(GCC_ROOT)/nacl-g++ ;
+C.RANLIB		?= $(GCC_ROOT)/nacl-ranlib ;
 
 SUFMODULE	= .so ;
 
+C.Defines * : _NACL _NACL32 ;
+
+VSPLATFORMMAP.nacl32 = "NaCl-32" ;

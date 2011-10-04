@@ -1,8 +1,11 @@
-C.AR			?= nacl64-ar ru ;
-C.CC			?= nacl64-gcc ;
-C.C++			?= nacl64-g++ ;
-C.LINK		?= nacl64-g++ ;
-C.RANLIB		?= nacl64-ranlib ;
+C.AR			?= $(GCC_ROOT)/nacl64-ar ru ;
+C.CC			?= $(GCC_ROOT)/nacl64-gcc ;
+C.C++			?= $(GCC_ROOT)/nacl64-g++ ;
+C.LINK			?= $(GCC_ROOT)/nacl64-g++ ;
+C.RANLIB		?= $(GCC_ROOT)/nacl64-ranlib ;
 
 SUFMODULE	= .so ;
 
+C.Defines * : _NACL _NACL64 ;
+
+VSPLATFORMMAP.nacl64 = "NaCl-64" ;
