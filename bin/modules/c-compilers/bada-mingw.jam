@@ -19,6 +19,11 @@ if $(PLATFORM) != bada1 && $(PLATFORM) != bada2
 
 ######################################################################################################################
 
+# Will need to end up with multiple platform configs, but for now.
+
+BADA_TARGET = HVGA ;	# Wave M
+BADA_TARGET = WVGA ;	# Wave 3
+
 # -------------------------------------------------------------------------------------
 # Defines
 # -------------------------------------------------------------------------------------
@@ -52,17 +57,49 @@ local _compilerFlags =
 	-Wno-deprecated
 	-g 
 	-fpic
-	-march=armv7-a 
-	-mthumb 
-	-mthumb-interwork 
-	-mfpu=vfpv3 
-	-mfloat-abi=hard
-#	-Wall 
 	-fmessage-length=0
 	-Wno-psabi	# Get rid of the mangling of 'va_list' has changed in GCC 4.4
 	-fsigned-char
 	-fshort-wchar
+	-ffunction-sections 
+	-fdata-sections 
+	-fvisibility=hidden 
+	-Wa,--noexecstack
+	-Wreturn-type 
+	-ffast-math
+	-finline-small-functions	
 	;
+	
+if $(PLATFORM) = bada1
+{
+	_compilerFlags += 	
+		-mcpu=cortex-a8
+		-mfpu=vfpv3
+		-mfloat-abi=hard
+		-mlittle-endian
+		-marm
+		;		
+}
+else if $(PLATFORM) = bada2
+{
+	if $(BADA_TARGET) = HVGA
+	{
+		_compilerFlags += 	
+			-marm 
+			-mfpu=vfp 
+			-mfloat-abi=softfp 
+			;
+	}
+	else if $(BADA_TARGET) = WVGA
+	{
+		_compilerFlags += 
+			-marm 
+			-march=armv7-a
+			-mfpu=vfpv3
+			-mfloat-abi=hard
+			;
+	}
+}
 	
 if $(CONFIG) = debug
 {
@@ -70,7 +107,12 @@ if $(CONFIG) = debug
 }
 else
 {
-	_compilerFlags += -Os ;
+	_compilerFlags += 
+		-fno-omit-frame-pointer 
+		-funswitch-loops
+		-finline-limit=300
+		-Os 
+		;
 }
 
 C.CFlags *		: $(_compilerFlags) ;
@@ -94,12 +136,25 @@ if $(PLATFORM) = bada1
 }
 else if $(PLATFORM) = bada2
 {
-	BADA_MODEL = WaveWVGA ;
+	if $(BADA_TARGET) = HVGA
+	{
+		BADA_MODEL = WaveHVGA ;
+	}
+	else if $(BADA_TARGET) = WVGA
+	{
+		BADA_MODEL = WaveWVGA ;
+	}
 }
 
-C.LinkDirectories * :
-	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target
-	;
+C.LinkDirectories * : $(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target ;
+	
+if $(PLATFORM) = bada1
+{
+	C.LinkDirectories * : 
+		$(BADA_SDK_HOME)/Tools/Toolchains/ARM/lib/gcc/arm-samsung-nucleuseabi/4.4.1
+		$(BADA_SDK_HOME)/Tools/Toolchains/ARM/arm-samsung-nucleuseabi/lib
+		;
+}
 
 # -------------------------------------------------------------------------------------
 # LinkPrebuiltLibraries
@@ -112,7 +167,16 @@ C.LinkPrebuiltLibraries * :
 	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target/FGraphicsEgl.so 
 	$(BADA_SDK_HOME)/Model/$(BADA_MODEL)/Target/StubDynCast.so 
 	;
-
+	
+if $(PLATFORM) = bada1
+{
+	C.LinkPrebuiltLibraries * :
+		c-newlib 
+		m-newlib
+		stdc++
+		gcc_s
+		;
+}
 # -------------------------------------------------------------------------------------
 # LinkFlags
 # -------------------------------------------------------------------------------------
@@ -122,14 +186,43 @@ C.LinkPrebuiltLibraries * :
 C.LinkFlags * :
 #	--enable-auto-import
 	-shared 
-	-Wl,--no-undefined
-	-march=armv7-a 
-	-mthumb 
-	-mthumb-interwork 
-	-mfpu=vfpv3 
-	-mfloat-abi=hard
-	-fsigned-char
+	-Wl,--no-undefined	
+	-fsigned-char	
+	-Wl,--gc-sections
+#	-Wl,--strip-all	
 	;
+	
+if $(PLATFORM) = bada1
+{
+	C.LinkFlags * :	
+		-nostdlib 
+		-mcpu=cortex-a8
+		-mfpu=vfpv3
+		-mfloat-abi=hard
+		-mlittle-endian
+		-marm
+		;		
+}
+else if $(PLATFORM) = bada2
+{	
+	if $(BADA_TARGET) = HVGA	
+	{
+		C.LinkFlags * :
+			-marm 
+			-mfpu=vfp 
+			-mfloat-abi=softfp 
+			;
+	}
+	else if $(BADA_TARGET) = WVGA
+	{
+		C.LinkFlags * :
+			-marm 
+			-march=armv7-a 
+			-mfpu=vfpv3 
+			-mfloat-abi=hard
+			;
+	}
+}
 
 # -------------------------------------------------------------------------------------
 # Misc
