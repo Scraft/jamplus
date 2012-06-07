@@ -7,6 +7,18 @@ C.RANLIB		?= ranlib ;
 SUFMODULE	= .dylib ;
 SUFLINKLIBS = $(SUFLIB) $(SUFMODULE) ;
 
+# x11 include path.
+local _x11IncludePathFlags	= -I$(isysroot)/usr/x11/include ;
+
+# Useful defines.
+local _macosxDefineFlags	= -D_MACOSX -D__MACOSX__ ;
+
+# Extra flags.
+local _extraFlags			= $(_x11IncludePathFlags) $(_macosxDefineFlags) ;
+
+C.Flags CC	: * : $(_extraFlags) : : $(PLATFORM) ;
+C.Flags C++	: * : $(_extraFlags) : : $(PLATFORM) ;
+
 actions C.Link
 {
 	"$(C.LINK)" $(LINKFLAGS) -o $(<[1]:C) $(>:C) $(NEEDLIBS:T) $(LINKLIBS:T)
@@ -96,8 +108,11 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : MACOSX_VERSION_MIN {
 			developerRoot = $(isysroot) ;
 	}
 
-	C.Flags CC	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
-	C.Flags C++	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
+	# x11 include path.
+	local _x11IncludePathFlags	= -I$(isysroot)/usr/x11/include ;
+
+	C.Flags CC	: $(TARGET) : -isysroot $(isysroot) $(_x11IncludePathFlags) $(flags) : : $(PLATFORM) ;
+	C.Flags C++	: $(TARGET) : -isysroot $(isysroot) $(_x11IncludePathFlags) $(flags) : : $(PLATFORM) ;
 	C.Flags M	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
 	C.Flags MM	: $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
 	C.LinkFlags $(TARGET) : -isysroot $(isysroot) $(flags) : : $(PLATFORM) ;
