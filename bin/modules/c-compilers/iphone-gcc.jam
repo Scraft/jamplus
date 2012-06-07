@@ -87,7 +87,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 		case iphone :
 			developerRoot = /Developer/Platforms/iPhoneOS.platform/Developer ;
 			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
-			SDK_VERSION ?= 4.3 ;
+			SDK_VERSION ?= 5.0 ;
 			switch $(SDK_VERSION) {
 				case 2.0 :
 					isysroot = $(developerRoot)/SDKs/iPhoneOS2.0.sdk ;
@@ -172,6 +172,14 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					XCODE_SDKROOT = iphoneos4.3 ;
 					SDK_VERSION_MIN ?= 4.3 ;
 
+				case 5.0 :
+					CC	= $(developerRoot)/usr/bin/gcc ;
+					C++	= $(developerRoot)/usr/bin/g++ ;
+					LINK	= $(developerRoot)/usr/bin/g++ ;
+					isysroot = $(developerRoot)/SDKs/iPhoneOS5.0.sdk ;
+					flags += -arch armv6 -miphoneos-version-min=5.0 ; 
+					XCODE_SDKROOT = iphoneos5.0 ;
+
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
 			SDK_VERSION_MIN ?= $(SDK_VERSION) ;
@@ -180,7 +188,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 		case iphonesimulator :
 			developerRoot = /Developer/Platforms/iPhoneSimulator.platform/Developer ;
 			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
-			SDK_VERSION ?= 4.3 ;
+			SDK_VERSION ?= 5.0 ;
 			switch $(SDK_VERSION) {
 				case 2.0 :
 					isysroot = $(developerRoot)/SDKs/iPhoneSimulator2.0.sdk ;
@@ -278,6 +286,14 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					defaultversionmin = 10.6 ;
 					XCODE_SDKROOT = iphoneos4.3 ;
 
+				case 5.0 :
+					CC	= $(developerRoot)/usr/bin/gcc ;
+					C++	= $(developerRoot)/usr/bin/g++ ;
+					LINK	= $(developerRoot)/usr/bin/g++ ;
+					isysroot = $(developerRoot)/SDKs/iPhoneSimulator5.0.sdk ;
+					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=50000 -arch i386 ;
+					XCODE_SDKROOT = iphoneos5.0 ;
+
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
 			SDK_VERSION_MIN ?= $(defaultversionmin) ;
@@ -286,8 +302,8 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 		case ipadsimulator :
 			developerRoot = /Developer/Platforms/iPhoneSimulator.platform/Developer ;
 			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
-			SDK_VERSION ?= 4.3 ;
-			SDK_VERSION_MIN ?= 4.3 ;
+			SDK_VERSION ?= 5.0 ;
+			SDK_VERSION_MIN ?= 5.0 ;
 			switch $(SDK_VERSION) {
 				case 3.2 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
@@ -325,6 +341,14 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					defaultversionmin = 10.6 ;
 					XCODE_SDKROOT = iphoneos4.3 ;
 
+				case 5.0 :
+					CC	= $(developerRoot)/usr/bin/gcc ;
+					C++	= $(developerRoot)/usr/bin/g++ ;
+					LINK	= $(developerRoot)/usr/bin/g++ ;
+					isysroot = $(developerRoot)/SDKs/iPhoneSimulator5.0.sdk ;
+					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=50000 -arch i386 ;
+					XCODE_SDKROOT = iphoneos5.0 ;
+
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
 			SDK_VERSION_MIN ?= $(defaultversionmin) ;
@@ -333,8 +357,8 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 		case ipad :
 			developerRoot = /Developer/Platforms/iPhoneOS.platform/Developer ;
 			C.STRIP = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/strip ;
-			SDK_VERSION ?= 4.3 ;
-			SDK_VERSION_MIN ?= 4.3 ;
+			SDK_VERSION ?= 5.0 ;
+			SDK_VERSION_MIN ?= 5.0 ;
 			switch $(SDK_VERSION) {
 				case 3.2 :
 					C.CC	= $(developerRoot)/usr/bin/gcc-4.2 ;
@@ -373,6 +397,14 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					DT_SDK_BUILD = 8F190 ;
 					DT_XCODE = 0400 ;
 					DT_XCODE_BUILD = 10M2518 ;
+
+				case 5.0 :
+					CC	= $(developerRoot)/usr/bin/gcc ;
+					C++	= $(developerRoot)/usr/bin/g++ ;
+					LINK	= $(developerRoot)/usr/bin/g++ ;
+					isysroot = $(developerRoot)/SDKs/iPhoneOS5.0.sdk ;
+					flags += -arch armv7 ; 
+					XCODE_SDKROOT = iphoneos5.0 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
