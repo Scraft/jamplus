@@ -1,4 +1,4 @@
-PLAYBOOK_NATIVE_ENV_BATCH_FILE = ;
+BLACKBERRY_NATIVE_ENV_BATCH_FILE = ;
 
 rule C.AutoDetect 
 {
@@ -9,15 +9,16 @@ rule C.AutoDetect
 	
 	BBNDK = $(BBNDK:J=" ") ;
 	
-	PLAYBOOK_NATIVE_ENV_BATCH_FILE = [ Glob $(BBNDK) : *NativeSDK-env.bat ] ;
-	if ! $(PLAYBOOK_NATIVE_ENV_BATCH_FILE)
+	BLACKBERRY_NATIVE_ENV_BATCH_FILE = [ Glob $(BBNDK) : *bbndk-env.bat ] ;
+	if ! $(BLACKBERRY_NATIVE_ENV_BATCH_FILE)
 	{
 		return ;
 	}
 	else
 	{
-		PLAYBOOK_NATIVE_ENV_BATCH_FILE = $(PLAYBOOK_NATIVE_ENV_BATCH_FILE:J=" ") ;
-		PLAYBOOK_NATIVE_ENV_BATCH_FILE = $(PLAYBOOK_NATIVE_ENV_BATCH_FILE:TC\\) ;
+		BLACKBERRY_NDK_DIR = $(BBNDK:TC\\) ;
+		BLACKBERRY_NATIVE_ENV_BATCH_FILE = $(BLACKBERRY_NATIVE_ENV_BATCH_FILE:J=" ") ;
+		BLACKBERRY_NATIVE_ENV_BATCH_FILE = $(BLACKBERRY_NATIVE_ENV_BATCH_FILE:TC\\) ;
 	}
 	
 	COMPILER.$(PLATFORM) = playbookdevice ;
@@ -27,7 +28,7 @@ rule C.AutoDetect
 	
 	if $(PLATFORM) != *  &&  $(CONFIG) != * 
 	{
-		UseModule c-compilers/playbook-gcc ;
+		UseModule c-compilers/blackberry-gcc ;
 	}
 	
 	return $(COMPILER.$(PLATFORM)) ;

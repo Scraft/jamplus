@@ -2,26 +2,26 @@ BLACKBERRY_NATIVE_ENV_BATCH_FILE = ;
 
 rule C.AutoDetect 
 {
-	if ! $(BBNDK)
+	if ! $(BB10NDK)
 	{
 		return ;
 	}
 	
-	BBNDK = $(BBNDK:J=" ") ;
+	BB10NDK = $(BB10NDK:J=" ") ;
 
-	BLACKBERRY_NATIVE_ENV_BATCH_FILE = [ Glob $(BBNDK) : bbndk-env.bat ] ;
+	BLACKBERRY_NATIVE_ENV_BATCH_FILE = [ Glob $(BB10NDK) : bbndk-env.bat ] ;
 	if ! $(BLACKBERRY_NATIVE_ENV_BATCH_FILE)
 	{
 		return ;
 	}
 	else
 	{
-		BLACKBERRY_NDK_DIR = $(BBNDK:TC\\) ;
+		BLACKBERRY_NDK_DIR = $(BB10NDK:TC\\) ;
 		BLACKBERRY_NATIVE_ENV_BATCH_FILE = $(BLACKBERRY_NATIVE_ENV_BATCH_FILE:J=" ") ;
 		BLACKBERRY_NATIVE_ENV_BATCH_FILE = $(BLACKBERRY_NATIVE_ENV_BATCH_FILE:TC\\) ;
 	}
 	
-	COMPILER.$(PLATFORM) = playbooksimulator ;
+	COMPILER.$(PLATFORM) = bb10simulator ;
 
 	# Use generic gcc module.
 	UseModule c-compilers/c-gcc ;
