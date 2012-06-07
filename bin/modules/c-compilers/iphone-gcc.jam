@@ -579,6 +579,7 @@ rule C._ApplicationFromObjects_LinkFlags
 		BUNDLE_PATH on $(TARGET) = $(bundlePath) ;
 		bundleExe = [ C.TargetGrist $(TARGET)|bundle : $(_linkTargets) ] ;
 		MakeLocate $(bundleExe) : $(bundlePath) ;
+		Depends $(TARGET) : $(bundleExe) ;
 		BUNDLE_EXE on $(TARGET) = $(bundleExe) ;
 
 		local bundleTarget = $(TARGET):bundle ;
@@ -882,20 +883,28 @@ actions C._CodeSign
 
 rule C.CodeSign TARGET : PROVISIONING_PROFILE
 {
+	local bundleExe ;
+	local linkTarget ;
+
+	on $(TARGET) {
+		bundleExe = $(BUNDLE_EXE) ;
+		linkTarget = $(LINK_TARGET) ;
+	}
+
+	# Bundle exe depends on link target.
+	Depends $(bundleExe) : $(linkTarget) ;
+	C.Strip $(bundleExe) : $(linkTarget) ;
+
 	if $(PLATFORM) in ipad iphone {
 		local bundlePath ;
 		local bundleTarget ;
 		local cleanBundleTarget ;
-		local bundleExe ;
-		local linkTarget ;
 		local entitlements ;
 
 		on $(TARGET) {
 			bundlePath = $(BUNDLE_PATH) ;
 			bundleTarget = $(BUNDLE_TARGET) ;
 			cleanBundleTarget = $(CLEAN_BUNDLE_TARGET) ;
-			bundleExe = $(BUNDLE_EXE) ;
-			linkTarget = $(LINK_TARGET) ;
 			entitlements = $(ENTITLEMENTS) ;
 		}
 
@@ -914,10 +923,6 @@ rule C.CodeSign TARGET : PROVISIONING_PROFILE
 		BUNDLE_PATH on $(codeResources) = $(bundlePath) ;
 		ENTITLEMENTS on $(codeResources) = $(entitlements) ;
 		PROVISIONING_PROFILE on $(codeResources) = $(PROVISIONING_PROFILE) ;
-
-		# Bundle exe depends on link target.
-		Depends $(bundleExe) : $(linkTarget) ;
-		C.Strip $(bundleExe) : $(linkTarget) ;
 
 		# Code signing depends on bundle (stripped) exe.
 		local dependsList = [ DependsList $(bundleTarget) ] $(bundleExe) $(entitlements) ;
