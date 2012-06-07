@@ -177,8 +177,9 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C++	= $(developerRoot)/usr/bin/g++ ;
 					LINK	= $(developerRoot)/usr/bin/g++ ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS5.0.sdk ;
-					flags += -arch armv6 -miphoneos-version-min=5.0 ; 
+					flags += -arch armv6 -mno-thumb ; 
 					XCODE_SDKROOT = iphoneos5.0 ;
+					SDK_VERSION_MIN ?= 5.0 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
@@ -291,7 +292,8 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C++	= $(developerRoot)/usr/bin/g++ ;
 					LINK	= $(developerRoot)/usr/bin/g++ ;
 					isysroot = $(developerRoot)/SDKs/iPhoneSimulator5.0.sdk ;
-					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=50000 -arch i386 ;
+					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=50000 ;
+					defaultversionmin = 10.6 ;
 					XCODE_SDKROOT = iphoneos5.0 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
@@ -347,6 +349,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					LINK	= $(developerRoot)/usr/bin/g++ ;
 					isysroot = $(developerRoot)/SDKs/iPhoneSimulator5.0.sdk ;
 					flags += -D__IPHONE_OS_VERSION_MIN_REQUIRED=50000 -arch i386 ;
+					defaultversionmin = 10.6 ;
 					XCODE_SDKROOT = iphoneos5.0 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
@@ -403,7 +406,7 @@ rule C.MacOSX_SDK TARGET : SDK_PLATFORM : SDK_VERSION : SDK_VERSION_MIN {
 					C++	= $(developerRoot)/usr/bin/g++ ;
 					LINK	= $(developerRoot)/usr/bin/g++ ;
 					isysroot = $(developerRoot)/SDKs/iPhoneOS5.0.sdk ;
-					flags += -arch armv7 ; 
+					flags += -arch armv7 -mno-thumb ; 
 					XCODE_SDKROOT = iphoneos5.0 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
