@@ -255,8 +255,8 @@ local function XcodeHelper_WritePBXLegacyTarget(self, info, allTargets, projects
 			table.insert(self.Contents, '/* Begin PBXLegacyTarget section */\n')
 		end
 
-		for curProject in ivalues(allTargets) do
-			if curProject.XcodeProjectType ~= projectType then continue end
+		for curProject in ivalues(allTargets) do repeat
+			if curProject.XcodeProjectType ~= projectType then break end
 
 			local subProjectInfo = XcodeHelper_GetProjectExportInfo(curProject.Name)
 			local subProject = Projects[curProject.Name]
@@ -306,7 +306,7 @@ local function XcodeHelper_WritePBXLegacyTarget(self, info, allTargets, projects
 			end
 
 			table.insert(self.Contents, '\t\t};\n')
-		end
+		until true end
 		if projectType == 'native' then
 			table.insert(self.Contents, '/* End PBXNativeTarget section */\n\n')
 		elseif projectType == 'legacy' then
@@ -315,8 +315,8 @@ local function XcodeHelper_WritePBXLegacyTarget(self, info, allTargets, projects
 	end
 
 	table.insert(self.Contents, "/* Begin PBXShellScriptBuildPhase section */\n")
-	for curProject in ivalues(allTargets) do
-		if curProject.XcodeProjectType ~= 'native' then continue end
+	for curProject in ivalues(allTargets) do repeat
+		if curProject.XcodeProjectType ~= 'native' then break end
 
 		local subProjectInfo = XcodeHelper_GetProjectExportInfo(curProject.Name)
 		local subProject = Projects[curProject.Name]
@@ -339,7 +339,7 @@ local function XcodeHelper_WritePBXLegacyTarget(self, info, allTargets, projects
 			table.insert(self.Contents, os.path.combine(projectsPath, 'xcodejam') .. [[ $PLATFORM $CONFIG $ACTION $TARGET_NAME";]] .. '\n')
 		end
 		table.insert(self.Contents, "\t\t};\n")
-	end
+	until true end
 	table.insert(self.Contents, expand("/* End PBXShellScriptBuildPhase section */\n\n"))
 end
 

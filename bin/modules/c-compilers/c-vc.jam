@@ -105,7 +105,7 @@ rule C._RuntimeTypeHelper
 
 actions response C.ManifestToRC
 {
-	^^($(1)|$(CONTENTS)) ;
+	^^($(1:C)|$(CONTENTS)) ;
 }
 
 rule C._ManifestHelper TARGET : MANIFEST : MANIFEST_TYPE
@@ -137,7 +137,7 @@ actions response C.Link
 {
 	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH:J=;);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
-	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>) $(NEEDLIBS:T) $(LINKLIBS:CT)) /out:$(<[1])
+	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:CT) $(LINKLIBS:CT)) /out:$(<[1]:C)
 }
 
 } else {
@@ -166,7 +166,7 @@ actions response C.LinkWithManifest
 	set PATH=$(MSVCBIN);$(MSVCNT_BIN_PATH:J=;);$(LINK_PATHS:E);%PATH%
 	SET INCLUDE=$(C.STDHDRS:\\J=;)
 	"$(C.LINK:\\)" /nologo @@($(LINKFLAGS) $(>:C) $(NEEDLIBS:TC) $(LINKLIBS:CT) /MAP) /out:$(<[1]:C\\)
-	"$(C.MT:\\)" -nologo -manifest $(MANIFEST).intermediate.manifest -outputresource:$(<[1]);$(MANIFEST_TYPE)
+	"$(C.MT:\\)" -nologo -manifest $(MANIFEST).intermediate.manifest -outputresource:$(<[1:C]);$(MANIFEST_TYPE)
 }
 
 }
