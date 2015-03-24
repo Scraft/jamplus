@@ -74,7 +74,7 @@ rule C.MacOSX_SDK SDK_VERSION {
 
 		case iphone :
 			developerRoot = /Developer/Platforms/iPhoneOS.platform/Developer ;
-			SDK_VERSION ?= 7.1 ;
+			SDK_VERSION ?= 8.1 ;
 			switch $(SDK_VERSION) {
 				case 4.3 :
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.3.sdk ;
@@ -115,13 +115,19 @@ rule C.MacOSX_SDK SDK_VERSION {
 					sdkroot = iphoneos7.1 ;
 					flags += -arch armv7 ;
 
+				case 8.1 :
+					developerRoot = [ Match ([^$(NEWLINE)]*) : [ Shell "xcode-select --print-path" ] ] ;
+					isysroot = $(developerRoot)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk ;
+					sdkroot = iphoneos8.1 ;
+					flags += -arch armv7 ;
+
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
 			flags += -fvisibility=hidden ;
 
 		case iphonesimulator :
 			developerRoot = /Developer/Platforms/iPhoneSimulator.platform/Developer ;
-			SDK_VERSION ?= 7.1 ;
+			SDK_VERSION ?= 8.1 ;
 			switch $(SDK_VERSION) {
 				case 4.3 :
 					isysroot = $(developerRoot)/SDKs/iPhoneSimulator4.3.sdk ;
@@ -156,6 +162,11 @@ rule C.MacOSX_SDK SDK_VERSION {
 					isysroot = $(developerRoot)/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.1.sdk ;
 					sdkroot = iphoneos7.1 ;
 
+				case 8.1 :
+					developerRoot = [ Match ([^$(NEWLINE)]*) : [ Shell "xcode-select --print-path" ] ] ;
+					isysroot = $(developerRoot)/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator8.1.sdk ;
+					sdkroot = iphoneos8.1 ;
+
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
 			flags += -arch i386 ;
@@ -163,7 +174,7 @@ rule C.MacOSX_SDK SDK_VERSION {
 
 		case ipadsimulator :
 			developerRoot = /Developer/Platforms/iPhoneSimulator.platform/Developer ;
-			SDK_VERSION ?= 7.1 ;
+			SDK_VERSION ?= 8.1 ;
 			switch $(SDK_VERSION) {
 				case 4.3 :
 					isysroot = $(developerRoot)/SDKs/iPhoneSimulator4.3.sdk ;
@@ -199,6 +210,11 @@ rule C.MacOSX_SDK SDK_VERSION {
 					isysroot = $(developerRoot)/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.1.sdk ;
 					sdkroot = iphoneos7.1 ;
 
+				case 8.1 :
+					developerRoot = [ Match ([^$(NEWLINE)]*) : [ Shell "xcode-select --print-path" ] ] ;
+					isysroot = $(developerRoot)/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator8.1.sdk ;
+					sdkroot = iphoneos8.1 ;
+
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
 			flags += -arch i386 ;
@@ -206,7 +222,7 @@ rule C.MacOSX_SDK SDK_VERSION {
 
 		case ipad :
 			developerRoot = /Developer/Platforms/iPhoneOS.platform/Developer ;
-			SDK_VERSION ?= 7.1 ;
+			SDK_VERSION ?= 8.1 ;
 			switch $(SDK_VERSION) {
 				case 4.3 :
 					isysroot = $(developerRoot)/SDKs/iPhoneOS4.3.sdk ;
@@ -239,6 +255,11 @@ rule C.MacOSX_SDK SDK_VERSION {
 					developerRoot = [ Match ([^$(NEWLINE)]*) : [ Shell "xcode-select --print-path" ] ] ;
 					isysroot = $(developerRoot)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.1.sdk ;
 					sdkroot = iphoneos7.1 ;
+
+				case 8.1 :
+					developerRoot = [ Match ([^$(NEWLINE)]*) : [ Shell "xcode-select --print-path" ] ] ;
+					isysroot = $(developerRoot)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk ;
+					sdkroot = iphoneos8.1 ;
 
 				case * :		Exit "* MacOSX_SDK: Unsupported version $(SDK_VERSION) for SDK platform $(SDK_PLATFORM)." ;
 			}
@@ -291,19 +312,19 @@ rule C.MinimumOSVersion TARGET : SDK_VERSION_MIN {
 			flags += -mmacosx-version-min=$(SDK_VERSION_MIN) ;
 
 		case iphone :
-			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1
+			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1 8.1
 			flags += -miphoneos-version-min=$(SDK_VERSION_MIN) ;
 
 		case iphonesimulator :
-			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1
+			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1 8.1
 			flags += -mios-simulator-version-min=$(SDK_VERSION_MIN) ;
 
 		case ipadsimulator :
-			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1
+			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1 8.1
 			flags += -mios-simulator-version-min=$(SDK_VERSION_MIN) ;
 
 		case ipad :
-			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1
+			# 4.3, 5.0, 5.1, 6.0 6.1 7.0 7.1 8.1
 			flags += -miphoneos-version-min=$(SDK_VERSION_MIN) ;
 	}
 
@@ -393,7 +414,14 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 				C._BundleInfoBoolean LSRequiresIPhoneOS : true ;
 				C._BundleInfoArray UIDeviceFamily : 1 ;
 				C._BundleInfoString DTPlatformName : iphoneos ;
-				C._BundleInfoString DTSDKName : iphoneos$(IPHONEOS_SDK_VERSION) ;
+				C._BundleInfoString DTXcode : 0611 ;
+				C._BundleInfoString DTSDKName : iphoneos$(IPHONEOS_SDK_VERSION) ;				
+				C._BundleInfoString DTSDKBuild : 12B411 ;
+				C._BundleInfoString BuildMachineOSBuild : 13F34 ;
+				C._BundleInfoString DTCompiler : com.apple.compilers.llvm.clang.1_0 ;
+				C._BundleInfoString DTPlatformVersion : 8.1 ;
+				C._BundleInfoString DTXcodeBuild : 6A2008a ;
+				C._BundleInfoString DTPlatformBuild : 12B411 ;
 				C._BundleInfoArray CFBundleSupportedPlatforms : iPhoneOS ;
 				C._BundleInfoString MinimumOSVersion : $(IOS_SDK_VERSION_MIN) ;
 
@@ -409,7 +437,14 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 				C._BundleInfoBoolean LSRequiresIPhoneOS : true ;
 				C._BundleInfoArray UIDeviceFamily : 2 ;
 				C._BundleInfoString DTPlatformName : iphoneos ;
-				C._BundleInfoString DTSDKName : iphoneos$(IPHONEOS_SDK_VERSION) ;
+				C._BundleInfoString DTXcode : 0511 ;	
+				C._BundleInfoString DTSDKName : iphoneos$(IPHONEOS_SDK_VERSION) ;			
+				C._BundleInfoString DTSDKBuild : 11D167 ;
+				C._BundleInfoString BuildMachineOSBuild : 13B42 ;
+				C._BundleInfoString DTCompiler : com.apple.compilers.llvm.clang.1_0 ;
+				C._BundleInfoString DTPlatformVersion : 8.1 ;
+				C._BundleInfoString DTXcodeBuild : 5B1008 ;
+				C._BundleInfoString DTPlatformBuild : 11D167 ;
 				C._BundleInfoArray CFBundleSupportedPlatforms : iPhoneOS ;
 				C._BundleInfoString MinimumOSVersion : $(IOS_SDK_VERSION_MIN) ;
 
@@ -443,6 +478,8 @@ rule C.BundleInfo TARGET : TYPE : VALUE {
 		case bundleversion :
 			C._BundleInfoString CFBundleVersion : $(VALUE) ;
 			CFBundleVersion = $(VALUE) ;
+		case bundleshortversion :
+			C._BundleInfoString CFBundleShortVersionString : $(VALUE) ;
 		case copyright :			C._BundleInfoString NSHumanReadableCopyright : $(VALUE) ;
 		case mainnibfile :			C._BundleInfoString NSMainNibFile : $(VALUE) ;
 		case resourcespec :			C._BundleInfoString CFBundleResourceSpecification : $(VALUE) ;
@@ -537,12 +574,31 @@ actions CpResource
 
 C.__DOLLAR = \\$ ;
 
+# 1. Make copy of incoming entitlements file to destination file.
+# 2. If "<key>aps-environment</key>" and "<string>development</string>" is in file, then set "aps-environment" to "development" in destination file (required for push notifications).
+# 3. If "<key>aps-environment</key>" and "<string>production</string>" is in file, then set "aps-environment" to "production" in destination file (required for push notifications).
+# 4. If "<key>beta-reports-active</key>" exists, and next line is "<true/>", then set "beta-reports-active" to "true" in destination file (required for push notifications).
+# 5. Set "get-task-allow" as per GET_TASK_ALLOW settings.
+# 6. Set 'keychain-access-groups:" as per $(AppIdentifierPrefix) and $(CFBundleIdentifier).
+# 7. Set 'application-identifier' as per $(AppIdentifierPrefix) and $(CFBundleIdentifier).
+actions ProcessEntitlementsWithProvision
+{
+	cp $(2) $(1)
+	cat "$(PROVISION)" | grep "<key>aps-environment</key>" > /dev/null && cat "$(PROVISION)" | grep "<string>development</string>" > /dev/null && /usr/libexec/PlistBuddy -c "Add :aps-environment string development" $(1)
+	cat "$(PROVISION)" | grep "<key>aps-environment</key>" > /dev/null && cat "$(PROVISION)" | grep "<string>production</string>" > /dev/null && /usr/libexec/PlistBuddy -c "Add :aps-environment string production" $(1)
+	cat "$(PROVISION)" | awk '/<key>beta-reports-active<\/key>/,/\/>/' | grep '<key>beta-reports-active</key>' -A1 | grep '<true/>' > /dev/null && /usr/libexec/PlistBuddy -c "Add :beta-reports-active bool true" $(1)
+	/usr/libexec/PlistBuddy -c "Add :get-task-allow bool $(GET_TASK_ALLOW)" $(1)
+	/usr/libexec/PlistBuddy -c "Set 'keychain-access-groups:0' $(AppIdentifierPrefix:E=*needs-AppIdentifierPrefix*).$(CFBundleIdentifier:E=*needs-CFBundleIdenfier*)" $(1)
+	/usr/libexec/PlistBuddy -c "Set application-identifier $(AppIdentifierPrefix:E=*needs-AppIdentifierPrefix*).$(CFBundleIdentifier:E=*needs-CFBundleIdenfier*)" $(1)
+}
+
 actions ProcessEntitlements
 {
-	plutil -convert xml1 -o $(1) $(2)
-	sed -i "" -e "s/$(C.__DOLLAR)(CFBundleIdentifier)/$(CFBundleIdentifier:E=*needs-CFBundleIdenfier*)/g" -e "s/$(C.__DOLLAR)(AppIdentifierPrefix)/$(AppIdentifierPrefix:E=*needs-AppIdentifierPrefix*)./g" -e "s/<key>keychain-access-groups/$(GET_TASK_ALLOW:E="")<key>keychain-access-groups/g" $(1)
+	cp $(2) $(1)
+	/usr/libexec/PlistBuddy -c "Add :get-task-allow bool $(GET_TASK_ALLOW:E=true)" $(1)
+	/usr/libexec/PlistBuddy -c "Set 'keychain-access-groups:0' $(AppIdentifierPrefix:E=*needs-AppIdentifierPrefix*).$(CFBundleIdentifier:E=*needs-CFBundleIdenfier*)" $(1)
+	/usr/libexec/PlistBuddy -c "Set application-identifier $(AppIdentifierPrefix:E=*needs-AppIdentifierPrefix*).$(CFBundleIdentifier:E=*needs-CFBundleIdenfier*)" $(1)
 }
-	#plutil -convert binary1 $(1)
 
 rule C.macosx._ApplicationFromObjects_PostBuild {
 	if bundle in $(OPTIONS) {
@@ -634,11 +690,47 @@ rule C.macosx._ApplicationFromObjects_PostBuild {
 			MakeLocate $(destEntitlementsPlist) : $(LOCATE_TARGET) ;
 			ENTITLEMENTS on $(C.ACTIVE_TOOLCHAIN_TARGET) = $(destEntitlementsPlist) ;
 			Depends $(bundleTarget) : $(destEntitlementsPlist) : $(sourceEntitlementsPlist) ;
-			local getTaskAllow = "<key>get-task-allow<\\/key><$(getTaskAllowValue)\\/>" ;
-			GET_TASK_ALLOW on $(destEntitlementsPlist) = $(getTaskAllow) ;
+			GET_TASK_ALLOW on $(destEntitlementsPlist) = $(getTaskAllowValue) ;
 			on $(C.ACTIVE_TOOLCHAIN_TARGET) UseCommandLine $(destEntitlementsPlist) : $(CFBundleIdentifier) $(AppIdentifierPrefix) $(getTaskAllow) ;
 			Clean $(cleanBundleTarget) : $(destEntitlementsPlist) ;
-			ProcessEntitlements $(destEntitlementsPlist) : $(sourceEntitlementsPlist) : $(C.ACTIVE_TOOLCHAIN_TARGET) ;
+
+			on $(TARGET) {
+				if $(PROVISION) {
+					# Set PROVISION on the entitlements file.
+					PROVISION on $(destEntitlementsPlist) = $(PROVISION) ;
+
+					# Get bundle path/target.
+					local _bundlePath ;
+					local _bundlePath = $(BUNDLE_PATH:Z=$(C.ACTIVE_TOOLCHAIN_TARGET)) ;
+					local _bundleTarget = $(BUNDLE_TARGET:Z=$(C.ACTIVE_TOOLCHAIN_TARGET)) ;
+
+					if ! $(_bundlePath) {
+						Echo *** C.Provision $(TARGET) \: $(PROFILE_ID) ;
+						Exit *** Bundle path not setup for target $(TARGET) ;
+					}
+					if ! $(_bundleTarget) {
+						Echo *** C.Provision $(TARGET) \: $(PROFILE_ID) ;
+						Exit *** Bundle target not setup for target $(TARGET) ;
+					}
+
+					local _dstProvision = [ C.GristFiles : embedded.mobileprovision ] ;
+					MakeLocate $(_dstProvision) : $(_bundlePath) ;
+
+					# Copy provision into the bundle and name it embedded.mobileprovision
+					IncludeModule copyfile ;
+					CopyFile $(TARGET) : $(_dstProvision) : $(PROVISION) ;
+					Depends $(_bundleTarget) : $(_dstProvision) ;
+
+					# Without this, if we change between profiles, the copy will not always
+					# work due to destination time stamp being newer than source (despite
+					# coming from a different file).
+					UseCommandLine $(_dstProvision) : $(PROVISION) ;
+			
+					ProcessEntitlementsWithProvision $(destEntitlementsPlist) : $(sourceEntitlementsPlist) : $(C.ACTIVE_TOOLCHAIN_TARGET) ;
+				} else {
+					ProcessEntitlements $(destEntitlementsPlist) : $(sourceEntitlementsPlist) : $(C.ACTIVE_TOOLCHAIN_TARGET) ;
+				}
+			}
 		}
 	}
 	
@@ -705,9 +797,6 @@ rule C._ApplicationTargetInfo {
 		SEARCH on $(sourceEntitlementsPlist) = $(isysroot) ;
 		local destEntitlementsPlist = @(Entitlements.plist:G=$(C.ACTIVE_TOOLCHAIN_TARGET_GRIST)) ;
 		MakeLocate $(destEntitlementsPlist) : $(LOCATE_TARGET) ;
-		Depends all : $(destEntitlementsPlist) : $(sourceEntitlementsPlist) ;
-		on $(C.ACTIVE_TOOLCHAIN_TARGET) UseCommandLine $(destEntitlementsPlist) : $(CFBundleIdentifier) $(AppIdentifierPrefix) ;
-		ProcessEntitlements $(destEntitlementsPlist) : $(sourceEntitlementsPlist) : $(C.ACTIVE_TOOLCHAIN_TARGET) ;
 
 		Contents += "Projects[ [[$(TARGET)]] ].XCODE_ENTITLEMENTS[ [[$(PLATFORM)]] ][ [[$(CONFIG)]] ] = [[$(destEntitlementsPlist:T)]]
 
@@ -721,26 +810,34 @@ rule XIB PARENT : SOURCES  {
 	PARENT = [ ActiveTarget $(PARENT) ] ;
 	
 	local bundlePath = $(BUNDLE_PATH:Z=$(C.ACTIVE_TOOLCHAIN_TARGET)) ;
+	local bundleTarget = $(BUNDLE_TARGET:Z=$(C.ACTIVE_TOOLCHAIN_TARGET)) ;
 	if ! $(bundlePath)
 	{
 		Echo *** XIB $(PARENT) \: $(SOURCES) ;
 		Exit *** Bundle path not setup for target $(TARGET) ;
 	}
 
+	local bundleTarget = $(BUNDLE_TARGET:Z=$(C.ACTIVE_TOOLCHAIN_TARGET)) ;
+	if ! $(bundleTarget)
+	{
+		Echo *** XIB $(PARENT) \: $(SOURCES) ;
+		Exit *** Bundle target not setup for target $(TARGET) ;
+	}
 
 	SOURCES = $(SOURCES:G=$(C.ACTIVE_TOOLCHAIN_TARGET_GRIST)) ;
 	SEARCH on $(SOURCES) = $(SEARCH_SOURCE) ;
 	
-	local targets = $(SOURCES:S=.nib) ;
+	local targets = $(SOURCES:BS=.nib) ;
 	
 	MakeLocate $(targets) : $(bundlePath) ;
 	Clean $(C.ACTIVE_TOOLCHAIN_CLEAN_TARGET) : $(targets) ;	
 	
-	Depends $(C.ACTIVE_TOOLCHAIN_TARGET) : $(targets) ;
+	Depends $(bundleTarget) : $(targets) ;
 
 	local source ;
 	for source in $(SOURCES) {
-		local target = $(source:S=.nib) ;
+		local target = $(source:BS=.nib) ;
+        MakeLocate $(target) : $(bundlePath) ;
 		Depends $(target) : $(source) ;
 	
 		CompileXIB $(target) : $(source) : $(C.COMPILER_SUITE_SYMBOL) ;
@@ -791,37 +888,13 @@ rule C.Provision TARGET : PROFILE_ID {
 			}
 		}
 	}
-
+	
 	if ! $(_matchingProvision) {
 		Exit *** No mobile provisions found that match PROFILE_ID \: $(PROFILE_ID) ;
 	}
 
-	# Get bundle path.
-	local _bundlePath ;
-	local _bundlePath = $(BUNDLE_PATH:Z=$(C.ACTIVE_TOOLCHAIN_TARGET)) ;
-	local _bundleTarget = $(BUNDLE_TARGET:Z=$(C.ACTIVE_TOOLCHAIN_TARGET)) ;
-
-	if ! $(_bundlePath) {
-		Echo *** C.Provision $(TARGET) \: $(PROFILE_ID) ;
-		Exit *** Bundle path not setup for target $(TARGET) ;
-	}
-	if ! $(_bundleTarget) {
-		Echo *** C.Provision $(TARGET) \: $(PROFILE_ID) ;
-		Exit *** Bundle target not setup for target $(TARGET) ;
-	}
-
-	local _dstProvision = [ C.GristFiles : embedded.mobileprovision ] ;
-	MakeLocate $(_dstProvision) : $(_bundlePath) ;
-
-	# Copy provision into the bundle and name it embedded.mobileprovision
-	IncludeModule copyfile ;
-	CopyFile $(TARGET) : $(_dstProvision) : $(_matchingProvision) ;
-	Depends $(_bundleTarget) : $(_dstProvision) ;
-
-	# Without this, if we change between profiles, the copy will not always
-	# work due to destination time stamp being newer than source (despite
-	# coming from a different file).
-	UseCommandLine $(_dstProvision) : $(_matchingProvision) ;
+	# Save matching provision name to target as we may need it later.
+	PROVISION on $(TARGET) = $(_matchingProvision:TC/) ;
 }
 
 
